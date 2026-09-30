@@ -1,0 +1,14 @@
+# Copyright (c) 2026 Md. Moshiur Rahman Mohi / THAMJJ13.TOP. Proprietary. All Rights Reserved.
+#
+# Localization generation config. `flutter pub get` / `flutter run` invokes
+# `flutter gen-l10n` because pubspec.yaml sets `flutter: generate: true`.
+#
+# Output lands in lib/l10n/generated/app_localizations*.dart, which is NOT committed: run
+# `flutter pub get` (or `flutter gen-l10n`) once before analyzing.
+
+arb-dir: lib/l10n
+template-arb-file: app_en.arb
+output-localization-file: app_localizations.dart
+output-class: AppLocalizations
+output-dir: lib/l10n/generated
+untranslated-messages-file: l10n_untranslated.json

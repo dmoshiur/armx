@@ -1,0 +1,115 @@
+# Copyright (c) 2026 Md. Moshiur Rahman Mohi / THAMJJ13.TOP. Proprietary. All Rights Reserved.
+#
+# A.R.M.X AI — Automated Resource Management eXtension (client).
+# Every dependency is PINNED EXACTLY (no ^, no ranges) so builds are reproducible.
+# Version resolution notes and deliberate substitutions are documented in docs/decisions/0002-dependency-pins.md
+# and README.md ("Dependency decisions").
+
+name: armx_ai
+description: >-
+  A.R.M.X AI (Automated Resource Management eXtension) client application.
+  Owner: Md. Moshiur Rahman Mohi. Brand: THAMJJ13.TOP. Proprietary software.
+publish_to: "none"
+version: 0.1.0+1
+
+environment:
+  # Flutter 3.47.5 ships Dart 3.13.4 (stable, 2026-09-18). Floor is 3.12.0 because
+  # flutter_riverpod 3.4.3 and camera 0.12.1 both require Dart ^3.12.0 / Flutter >=3.44.0.
+  sdk: ">=3.12.0 <4.0.0"
+  flutter: ">=3.44.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+
+  # ---- State management ----------------------------------------------------
+  flutter_riverpod: 3.4.3 # latest stable on the 3.4 line
+  riverpod_annotation: 4.0.7 # generator 4.0.9 <-> annotation 4.0.7 is the published pairing
+
+  # ---- Routing -------------------------------------------------------------
+  go_router: 18.0.2
+
+  # ---- Models --------------------------------------------------------------
+  freezed_annotation: 3.1.0
+  json_annotation: 4.12.0
+
+  # ---- Local database (offline cache, prefs, outbox) -----------------------
+  drift: 2.35.0
+  drift_flutter: 0.3.1 # bundles path_provider + sqlite3_flutter_libs wiring for all target platforms
+
+  # ---- Logging -------------------------------------------------------------
+  logger: 2.7.0
+
+  # ---- Network -------------------------------------------------------------
+  dio: 5.11.1
+  web_socket_channel: 3.0.1
+
+  # ---- Secure storage + crypto --------------------------------------------
+  flutter_secure_storage: 10.3.4
+  cryptography: 2.9.0 # Ed25519 + SHA-256 (package:crypto has no Ed25519)
+
+  # ---- Voice ---------------------------------------------------------------
+  speech_to_text: 7.5.0
+  flutter_tts: 4.2.5
+
+  # ---- Vision --------------------------------------------------------------
+  camera: 0.12.1
+  google_mlkit_face_detection: 0.13.2
+  google_mlkit_pose_detection: 0.14.1 # palm gesture; Android/iOS only (desktop degrades gracefully)
+  tflite_flutter: 0.12.1 # face embeddings, on-device only
+
+  # ---- Device / system -----------------------------------------------------
+  local_auth: 3.0.2
+  permission_handler: 13.0.2
+  geolocator: 14.1.1
+
+  # ---- Activity ------------------------------------------------------------
+  flutter_activity_recognition: 4.0.0
+
+  # ---- Misc ----------------------------------------------------------------
+  qr_flutter: 4.1.0 # pairing QR for the device public key / fingerprint
+  intl: 0.20.3 # must stay compatible with flutter_localizations (^0.20.3 on Flutter 3.47)
+  uuid: 4.6.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  integration_test:
+    sdk: flutter
+
+  flutter_lints: 6.0.0
+
+  # ---- Code generation -----------------------------------------------------
+  build_runner: 2.16.1
+  freezed: 4.0.2
+  json_serializable: 6.14.1
+  drift_dev: 2.35.0
+  riverpod_generator: 4.0.9
+
+  # ---- Lints ---------------------------------------------------------------
+  custom_lint: 0.8.1
+  riverpod_lint: 3.1.9
+
+  # ---- Test helpers --------------------------------------------------------
+  mocktail: 1.0.5
+
+flutter:
+  uses-material-design: true
+  generate: true # runs `flutter gen-l10n` from l10n.yaml during pub get / build
+
+  assets:
+    - assets/models/ # optional .tflite model dir (see assets/models/README.md)
+    - assets/images/
+
+  # Fonts are BUNDLED (no runtime font downloads, works offline, no network fonts).
+  # Both files are variable fonts (fvar axes: Inter -> opsz,wght; JetBrains Mono -> wght);
+  # typography sets FontVariation values so weights render exactly.
+  fonts:
+    - family: Inter
+      fonts:
+        - asset: assets/fonts/Inter.ttf
+    - family: JetBrainsMono
+      fonts:
+        - asset: assets/fonts/JetBrainsMono.ttf

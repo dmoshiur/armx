@@ -1,0 +1,207 @@
+{
+  "@@locale": "en",
+  "@@last_modified": "2026-09-30T00:00:00.000Z",
+  "appTitle": "A.R.M.X AI",
+  "appTagline": "Automated Resource Management eXtension",
+  "commonRetry": "Retry",
+  "commonCancel": "Cancel",
+  "commonOk": "OK",
+  "commonClose": "Close",
+  "commonSave": "Save",
+  "commonDelete": "Delete",
+  "commonBack": "Back",
+  "commonNext": "Next",
+  "commonDone": "Done",
+  "commonLoading": "Loading…",
+  "commonError": "Something went wrong",
+  "commonEmpty": "Nothing here yet",
+  "commonSearch": "Search",
+  "commonRefresh": "Refresh",
+  "commonCopy": "Copy",
+  "commonCopied": "Copied to clipboard",
+  "commonExport": "Export",
+  "commonReset": "Reset",
+  "commonApply": "Apply",
+  "commonEnable": "Enable",
+  "commonDisable": "Disable",
+  "commonConfirm": "Confirm",
+  "commonDismiss": "Dismiss",
+  "commonApprove": "Approve",
+  "commonDeny": "Deny",
+  "commonYes": "Yes",
+  "commonNo": "No",
+  "commonOnline": "Online",
+  "commonOffline": "Offline",
+  "commonUnknown": "Unknown",
+  "commonMoreOptions": "More options",
+  "commonSecondsShort": "{count}s",
+  "@commonSecondsShort": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "navDashboard": "Dashboard",
+  "navChat": "Chat",
+  "navDevices": "Devices",
+  "navActivity": "Activity",
+  "navAdmin": "Admin",
+  "navSettings": "Settings",
+  "navVision": "Vision",
+  "navUnlock": "Unlock",
+  "themeTitle": "Theme",
+  "themeSystem": "System",
+  "themeLight": "Light",
+  "themeDark": "Dark",
+  "languageTitle": "Language",
+  "languageSystem": "System default",
+  "languageEnglish": "English",
+  "languageBengali": "বাংলা",
+  "aboutTitle": "About",
+  "aboutVersion": "Version {version}",
+  "@aboutVersion": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
+  "aboutOwner": "Owner",
+  "aboutBrand": "Brand",
+  "aboutLicenses": "Open-source licences",
+  "aboutPrivacy": "Privacy",
+  "aboutDiagnostics": "Diagnostics",
+  "splashInitialising": "Initialising secure environment…",
+  "splashTaglineShort": "Secure local control for your devices",
+  "errorConfigTitle": "Configuration problem",
+  "errorConfigBody": "This build is misconfigured and cannot start. Please reinstall or contact the administrator.",
+  "errorNetworkTitle": "Cannot reach the server",
+  "errorNetworkBody": "Check your connection and the server address, then try again.",
+  "errorTimeoutTitle": "The server took too long",
+  "errorTimeoutBody": "The request timed out. Try again in a moment.",
+  "errorAuthTitle": "Session problem",
+  "errorAuthBody": "Please sign in again to continue.",
+  "errorPolicyTitle": "Verification required",
+  "errorPolicyBody": "This action needs a higher level of verification.",
+  "errorVerificationTitle": "Verification failed",
+  "errorVerificationBody": "We could not confirm it is you. Try again.",
+  "errorStorageTitle": "Local storage problem",
+  "errorStorageBody": "The app could not read or write local data.",
+  "errorPermissionTitle": "Permission needed",
+  "errorPermissionBody": "A.R.M.X needs this permission to continue. You can grant it in system settings.",
+  "errorUnsupportedTitle": "Not available on this platform",
+  "errorUnsupportedBody": "{reason}",
+  "@errorUnsupportedBody": {
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
+  "errorTransportTitle": "Realtime link is down",
+  "errorTransportBody": "Live updates are paused while the app reconnects.",
+  "errorKillSwitchTitle": "KILL-SWITCH is on",
+  "errorKillSwitchBody": "The assistant is disabled. Re-enable it in Admin to continue.",
+  "errorUnexpectedTitle": "Unexpected error",
+  "errorUnexpectedBody": "Reference code: {code}",
+  "@errorUnexpectedBody": {
+    "placeholders": {
+      "code": {
+        "type": "String"
+      }
+    }
+  },
+  "validationEmpty": "This field is required",
+  "validationNotAbsoluteUrl": "Enter a full address, for example https://armx.example.com",
+  "validationUnsupportedScheme": "Only https (or http on a trusted local network) is allowed",
+  "validationCleartextNotAllowed": "Release builds require https",
+  "validationMissingHost": "The address is missing a host name",
+  "validationBadPort": "The port must be between 1 and 65535",
+  "validationTooLong": "This value is too long",
+  "validationInvalidCharacters": "This value contains characters that are not allowed",
+  "validationBadDeviceKey": "A device key must be 32–128 letters, digits, '-' or '_'",
+  "validationBadThreshold": "Pick a value between 0.10 and 0.99",
+  "validationBadWakeWord": "Use 2–32 letters or digits",
+  "riskLow": "LOW",
+  "riskMedium": "MEDIUM",
+  "riskHigh": "HIGH",
+  "riskTierSemantics": "{tier} risk action",
+  "@riskTierSemantics": {
+    "placeholders": {
+      "tier": {
+        "type": "String"
+      }
+    }
+  },
+  "orbStateIdle": "Idle",
+  "orbStateListening": "Listening",
+  "orbStateThinking": "Thinking",
+  "orbStateSpeaking": "Speaking",
+  "orbStateLocked": "Locked",
+  "orbSemantics": "Assistant is {state}",
+  "@orbSemantics": {
+    "placeholders": {
+      "state": {
+        "type": "String"
+      }
+    }
+  },
+  "statusConnecting": "Connecting…",
+  "statusConnected": "Connected",
+  "statusReconnecting": "Reconnecting…",
+  "statusDisconnected": "Disconnected",
+  "statusLocked": "Locked",
+  "statusKilled": "KILL-SWITCH",
+  "placeholderStartedInStep": "This screen arrives in step {step}",
+  "@placeholderStartedInStep": {
+    "placeholders": {
+      "step": {
+        "type": "int"
+      }
+    }
+  },
+  "placeholderStepBody": "A.R.M.X is being built in reported steps. The route, theme and mock backend for this screen already work.",
+  "a11yLoading": "Loading content",
+  "a11yError": "Error state. {message}",
+  "@a11yError": {
+    "placeholders": {
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "killSwitchTitle": "KILL-SWITCH",
+  "killSwitchHoldHint": "Long-press for 1 second",
+  "killSwitchEngaged": "Assistant disabled — tap to re-enable in Admin",
+  "killSwitchArmed": "Hold to disable everything",
+  "verificationFace": "Face",
+  "verificationVoice": "Voice",
+  "verificationBiometric": "Biometric/PIN",
+  "verificationRequired": "Verification required",
+  "verificationExpiresIn": "expires in {seconds}s",
+  "shellLockApp": "Lock app",
+  "shellConnection": "Connection",
+  "shellNotConnected": "Not connected",
+  "shellMockBackend": "Mock backend",
+  "diagnosticsTitle": "Diagnostics",
+  "diagnosticsLogLines": "Recent log lines",
+  "diagnosticsCopyLogs": "Copy logs",
+  "diagnosticsClearLogs": "Clear logs",
+  "diagnosticsConfiguration": "Configuration",
+  "designSystemTitle": "Design system",
+  "designSystemSubtitle": "Tokens, orb states, risk chips and panels",
+  "settingsPrivacySection": "Privacy",
+  "settingsSecuritySection": "Security",
+  "settingsVoiceSection": "Voice",
+  "settingsVisionSection": "Vision",
+  "licensesTitle": "Licences",
+  "creditFooter": "A.R.M.X AI by THAMJJ13.TOP - Md. Moshiur Rahman Mohi. All Rights Reserved.",
+  "@verificationExpiresIn": {
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      }
+    }
+  }
+}
