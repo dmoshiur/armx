@@ -1,0 +1,49 @@
+# Copyright (c) 2026 Md. Moshiur Rahman Mohi / THAMJJ13.TOP. Proprietary. All Rights Reserved.
+
+# Flutter / Dart
+.dart_tool/
+.packages
+build/
+.flutter-plugins
+.flutter-plugins-dependencies
+pubspec.lock
+
+# Platform build output
+android/.gradle/
+android/local.properties
+android/key.properties
+android/app/debug/
+android/app/profile/
+android/app/release/
+windows/flutter/ephemeral/
+linux/flutter/ephemeral/
+ios/Pods/
+macos/Pods/
+
+# Generated localization / codegen byproducts
+l10n_untranslated.json
+
+# IDE
+.idea/
+.vscode/
+*.iml
+*.iws
+
+# Secrets and local config — NEVER commit these.
+.env
+.env.*
+*.jks
+*.keystore
+*.p12
+*.pem
+*.key
+secrets/
+
+# Coverage / test artifacts
+coverage/
+test/**/failures/
+*.lcov
+
+# OS noise
+.DS_Store
+Thumbs.db

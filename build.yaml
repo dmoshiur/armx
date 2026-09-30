@@ -1,0 +1,30 @@
+# Copyright (c) 2026 Md. Moshiur Rahman Mohi / THAMJJ13.TOP. Proprietary. All Rights Reserved.
+#
+# Code-generation configuration for build_runner.
+# Run:  dart run build_runner build --delete-conflicting-outputs
+#
+# Wire format is snake_case everywhere (REST bodies, WebSocket events, MQTT payloads as
+# documented in docs/api.md). Configuring it globally here avoids repeating annotations on
+# every freezed class.
+
+targets:
+  $default:
+    builders:
+      json_serializable:
+        options:
+          field_rename: snake
+          explicit_to_json: true
+          create_factory: true
+          create_to_json: true
+          checked: false
+          disallow_unrecognized_keys: false
+          include_if_null: false
+      drift_dev:
+        options:
+          store_date_time_values_as_text: true
+          named_parameters: true
+      riverpod_generator:
+        options:
+          # Providers are generated as `final` (not `const`) — riverpod_generator 4.x
+          # behaviour. Do not write `const` before generated providers in tests.
+          provider_name_suffix: Provider
