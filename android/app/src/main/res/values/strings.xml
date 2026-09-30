@@ -1,0 +1,13 @@
+<!-- Copyright (c) 2026 Md. Moshiur Rahman Mohi / THAMJJ13.TOP. Proprietary. All Rights Reserved. -->
+<resources>
+    <string name="app_name">A.R.M.X AI</string>
+    <string name="listen_notification_channel">Assistant listening</string>
+    <string name="listen_notification_channel_description">Ongoing notice while the A.R.M.X foreground service is active.</string>
+    <string name="listen_notification_title">A.R.M.X assistant service</string>
+    <string name="listen_notification_engine_pending">Service active. Wake-word engine is not connected; no audio is captured.</string>
+    <string name="listen_notification_paused">Assistant service paused.</string>
+    <string name="listen_action_talk">Talk</string>
+    <string name="listen_action_pause">Pause listening</string>
+    <string name="listen_action_resume">Resume listening</string>
+    <string name="listen_action_kill_switch">KILL-SWITCH</string>
+</resources>

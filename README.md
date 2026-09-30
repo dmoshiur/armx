@@ -32,9 +32,17 @@ privately hosted home/estate assistant.
 | 10 | Settings polish, full test suite, release docs | |
 
 Step 1 ships the design system, the five-tab shell, the routing table, English + Bengali
-localization (140 keys each), the security core (`RiskPolicy`, evidence, secure storage), the
+localization (161 keys each), the security core (`RiskPolicy`, evidence, secure storage), the
 data layer (models, Drift schema, preferences) and a mock backend that behaves like the real
 one — including a working kill-switch and streaming assistant.
+
+### Background assistant add-on
+
+Deliveries 1–2 add the Android foreground-service shell, persistent notification actions,
+live status controls, and a native no-audio wake-word stub/adapter contract. The real
+wake-word detector is **not connected yet**; this phase does not access or capture microphone
+audio. See [`docs/assistant-mode.md`](docs/assistant-mode.md) for Android start restrictions,
+privacy behavior, and verification limits.
 
 ## Quick start
 
