@@ -14,6 +14,10 @@ abstract final class AppRoutes {
   /// Device pairing screen (server URL + device key + key fingerprint).
   static const String pairing = '/pairing';
 
+  /// App-lock gate (biometrics / device PIN / app PIN) shown on cold start
+  /// with a restored session and on resume past the auto-lock timeout.
+  static const String lock = '/lock';
+
   /// Assistant dashboard.
   static const String dashboard = '/dashboard';
 

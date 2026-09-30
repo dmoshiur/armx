@@ -44,11 +44,29 @@ abstract final class PreferenceKeys {
   /// Whether the app requires a biometric/PIN unlock on launch.
   static const String appLockEnabled = 'armx.security.app_lock';
 
+  /// Background seconds before the app lock re-arms: `0` | `30` | `60` | `300`.
+  static const String autoLockTimeout = 'armx.security.auto_lock_timeout';
+
   /// Whether background activity recognition may run.
   static const String activityRecognitionEnabled = 'armx.activity.enabled';
 
   /// Last authorised server URL (only used to prefill the pairing form).
   static const String lastServerUrl = 'armx.network.last_server_url';
+
+  /// Pairing state machine marker: `unpaired` | `pending` | `approved` | `rejected`.
+  static const String pairingStatus = 'armx.pairing.status';
+
+  /// Human-readable name given to this device during pairing (non-secret).
+  static const String pairingDeviceName = 'armx.pairing.device_name';
+
+  /// ISO-8601 timestamp of a completed pairing (non-secret).
+  static const String pairingPairedAt = 'armx.pairing.paired_at';
+
+  /// Whether sign-in tokens survive an app restart ("Remember this device").
+  static const String rememberDevice = 'armx.auth.remember_device';
+
+  /// JSON of the signed-in user profile (non-secret session metadata).
+  static const String sessionUser = 'armx.auth.session_user';
 
   /// Keys that hold no personal information and may be exported.
   static const List<String> exportable = <String>[
@@ -82,8 +100,14 @@ abstract class AppPreferences with _$AppPreferences {
     @Default(true) bool ttsAutoSpeak,
     @Default(true) bool hapticsEnabled,
     @Default(true) bool appLockEnabled,
+    @Default(SecurityConstants.defaultAutoLockSeconds) int autoLockTimeoutSeconds,
     @Default(false) bool activityRecognitionEnabled,
     @Default('') String lastServerUrl,
+    @Default('unpaired') String pairingStatus,
+    @Default('') String pairingDeviceName,
+    @Default('') String pairingPairedAt,
+    @Default(true) bool rememberDevice,
+    @Default('') String sessionUserJson,
   }) = _AppPreferences;
 
   const AppPreferences._();

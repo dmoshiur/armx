@@ -21,8 +21,8 @@ privately hosted home/estate assistant.
 | Step | Scope | State |
 | --- | --- | --- |
 | 1 | Setup, theme, router, l10n, skeleton, mock backend | ✅ delivered |
-| 2 | Auth, pairing, app lock | ⏳ next |
-| 3 | Chat + WebSocket + tool approval cards | |
+| 2 | Auth, pairing, app lock | ✅ delivered |
+| 3 | Chat + WebSocket + tool approval cards | ⏳ next |
 | 4 | Voice (push-to-talk, wake word, TTS) | |
 | 5 | Dashboard + devices | |
 | 6 | Admin, kill-switch, audit | |

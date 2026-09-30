@@ -93,14 +93,21 @@ flutter test --coverage                      # writes coverage/lcov_coverage.inf
 lcov --remove coverage/lcov_coverage.info 'lib/features/*' -o coverage/core_data.info
 genhtml coverage/core_data.info -o coverage/html
 
-flutter test integration_test                 # pair → chat → approve → kill-switch
+flutter test integration_test                 # step 2: pair → approve → login → resume locked → unlock → dashboard
 ```
+
+Step-2 suites live in `test/unit/features/auth/` (PIN store, auto-lock policy, rate
+limiter, session refresh, pairing machine), `test/unit/data/auth_interceptor_test.dart`,
+`test/widget/auth/` (pairing, login, lock) and `test/golden/auth_golden_test.dart`.
 
 Goldens are regenerated deliberately, never automatically:
 
 ```bash
 flutter test --update-goldens test/golden
 ```
+
+Run that once before the first `flutter test` run on a fresh checkout: the step-2
+baselines (`login_*`, `pairing_*`, `lock_*`) are generated that way and reviewed by eye.
 
 ## 6. Troubleshooting
 

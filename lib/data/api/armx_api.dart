@@ -20,16 +20,21 @@ import 'ws_events.dart';
 /// `core/errors/app_exception.dart`; no raw `DioException` ever escapes this layer.
 ///
 /// REST endpoints (see `docs/api.md` for full JSON schemas):
-/// `POST /auth/login`, `POST /devices/pair`, `GET /devices`,
+/// `GET /health`, `POST /auth/login`, `POST /auth/refresh`, `POST /auth/logout`,
+/// `POST /devices/pair`, `POST /devices/unpair`, `GET /devices`,
 /// `POST /devices/{id}/command`, `GET /audit`, `POST /admin/kill`, `POST /admin/tools`,
 /// `POST /unlock/request`, `GET|POST /rules`, plus `GET /ws` for events.
 abstract interface class ArmxApi {
   // ---- Authentication & pairing -------------------------------------------
 
-  /// Probes a server before pairing: reachability, version and TLS fingerprint.
-  Future<ServerProbe> probe(Uri serverUrl);
+  /// Verifies a server with `GET /health`: reachability, version, TLS fingerprint.
+  ///
+  /// Powers the "Test connection" button on the pairing screen.
+  Future<ServerProbe> health(Uri serverUrl);
 
-  /// Signs in and returns a session. The device key is sent as `X-Armx-Device-Key`.
+  /// Signs in with `POST /auth/login` and returns a session.
+  ///
+  /// The device key travels as `X-Armx-Device-Key`.
   Future<AuthSession> login({
     required Uri serverUrl,
     required String username,
@@ -37,16 +42,38 @@ abstract interface class ArmxApi {
     required String deviceKey,
   });
 
-  /// Registers this device's Ed25519 public key with the server.
-  Future<PairingResult> pair({
+  /// Exchanges a refresh token with `POST /auth/refresh` for a fresh token pair.
+  ///
+  /// Throws `AuthException(AuthFailureReason.refreshRejected)` when the token is
+  /// unknown/expired — the caller must sign out and request a full login.
+  Future<AuthTokens> refresh({
+    required Uri serverUrl,
+    required String refreshToken,
+  });
+
+  /// Registers this device's Ed25519 public key with `POST /devices/pair`.
+  ///
+  /// May answer `pending` (awaiting admin approval) or throw
+  /// `AuthException(AuthFailureReason.pairingRejected)` for a refused device.
+  Future<PairingStatus> pair({
     required Uri serverUrl,
     required String publicKey,
     required String deviceName,
     required String platform,
   });
 
-  /// Invalidates the current session server-side (best effort).
+  /// Invalidates the current session server-side with `POST /auth/logout`
+  /// (best effort — local token deletion happens regardless).
   Future<void> logout();
+
+  /// Drops this device's registration server-side with `POST /devices/unpair`.
+  ///
+  /// Idempotent: the caller clears local pairing material even if the server
+  /// was unreachable.
+  Future<void> unpair({
+    required Uri serverUrl,
+    required String deviceId,
+  });
 
   // ---- Devices -------------------------------------------------------------
 

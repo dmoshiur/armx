@@ -4,6 +4,12 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
+import '../../features/auth/lock/app_lock_controller.dart';
+import '../../features/auth/lock/lock_page.dart';
+import '../../features/auth/login/login_page.dart';
+import '../../features/auth/pairing/pairing_controller.dart';
+import '../../features/auth/pairing/pairing_page.dart';
+import '../../features/auth/session/auth_controller.dart';
 import '../../features/bootstrap/bootstrap_gate.dart';
 import '../../features/common/placeholder_page.dart';
 import '../../features/dev/design_system_page.dart';
@@ -18,16 +24,69 @@ part 'app_router.g.dart';
 /// Builds the app router.
 ///
 /// The five primary tabs live inside a `StatefulShellRoute.indexedStack` so each keeps its
-/// own state; everything else (login, pairing, vision, unlock, settings and the dev
+/// own state; everything else (login, pairing, lock, vision, unlock, settings and the dev
 /// gallery) is pushed on top of the shell.
 ///
-/// Auth gating is deliberately absent in step 1: the redirect that forces login lands with
-/// the auth feature in step 2, together with session restore in the bootstrap provider.
+/// Step-2 gating (redirect, evaluated on every navigation and re-evaluated whenever the
+/// pairing, auth or app-lock controllers change):
+///
+/// 1. splash / `AuthPhase.restoring` — untouched; the bootstrap gate owns the launch.
+/// 2. not paired — always [AppRoutes.pairing] (pending and rejected live there too).
+/// 3. paired + signed out (or `sessionExpired`) — [AppRoutes.login], capturing the
+///    current location as the pending intent so the next sign-in lands where the user
+///    was headed.
+/// 4. paired + signed in + `lockDue` — [AppRoutes.lock], likewise capturing intent for
+///    the post-unlock redirect.
+/// 5. otherwise — the requested route (step-1 routes keep working unchanged).
 @Riverpod(keepAlive: true)
 GoRouter appRouter(Ref ref) {
-  return GoRouter(
+  final router = GoRouter(
     initialLocation: AppRoutes.splash,
     debugLogDiagnostics: false,
+    redirect: (context, state) {
+      final location = state.matchedLocation;
+
+      // The splash runs the bootstrap sequence; never pull it away mid-restore.
+      if (location == AppRoutes.splash) {
+        return null;
+      }
+
+      final auth = ref.read(authControllerProvider);
+      if (auth.phase == AuthPhase.restoring) {
+        return null;
+      }
+
+      // Gate 1: pairing. Approved is the only state that leaves the screen;
+      // pending and rejected stay there by design (their retry UIs live on it).
+      final pairing = ref.read(pairingControllerProvider);
+      if (!pairing.paired) {
+        return location == AppRoutes.pairing ? null : AppRoutes.pairing;
+      }
+
+      // Gate 2: session. `sessionExpired` is a signed-out state that still
+      // carries the localized "your session expired" notice into login.
+      if (auth.phase == AuthPhase.signedOut ||
+          auth.phase == AuthPhase.sessionExpired) {
+        if (location == AppRoutes.login) {
+          return null;
+        }
+        // Preserve the interrupted navigation across the login round-trip
+        // (the lock route re-enters through the normal rule below instead).
+        if (location != AppRoutes.lock) {
+          ref.read(authControllerProvider.notifier).setPendingIntent(location);
+        }
+        return AppRoutes.login;
+      }
+
+      // Gate 3: LOW-tier app lock (see AppLockController for the tier note).
+      final lock = ref.read(appLockControllerProvider);
+      if (lock.lockDue && location != AppRoutes.lock) {
+        ref.read(authControllerProvider.notifier).setPendingIntent(location);
+        return AppRoutes.lock;
+      }
+
+      return null;
+    },
     routes: <RouteBase>[
       GoRoute(
         path: AppRoutes.splash,
@@ -37,20 +96,17 @@ GoRouter appRouter(Ref ref) {
       GoRoute(
         path: AppRoutes.login,
         name: 'login',
-        builder: (context, state) => const PlaceholderPage(
-          title: 'Sign in',
-          step: 2,
-          icon: Icons.login_rounded,
-        ),
+        builder: (context, state) => const LoginPage(),
       ),
       GoRoute(
         path: AppRoutes.pairing,
         name: 'pairing',
-        builder: (context, state) => const PlaceholderPage(
-          title: 'Pair this device',
-          step: 2,
-          icon: Icons.qr_code_2_rounded,
-        ),
+        builder: (context, state) => const PairingPage(),
+      ),
+      GoRoute(
+        path: AppRoutes.lock,
+        name: 'lock',
+        builder: (context, state) => const LockPage(),
       ),
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) =>
@@ -166,6 +222,23 @@ GoRouter appRouter(Ref ref) {
     ],
     errorBuilder: (context, state) => AppRouteErrorPage(message: state.error?.toString()),
   );
+
+  // The redirect above reads plain Riverpod state, so every change to those
+  // controllers must re-evaluate it (go_router only re-runs redirects on
+  // navigation or refresh).
+  ref.listen<PairingFlowState>(
+    pairingControllerProvider,
+    (previous, next) => router.refresh(),
+  );
+  ref.listen<AuthState>(
+    authControllerProvider,
+    (previous, next) => router.refresh(),
+  );
+  ref.listen<AppLockState>(
+    appLockControllerProvider,
+    (previous, next) => router.refresh(),
+  );
+  return router;
 }
 
 /// Fallback screen for an unknown or malformed route.

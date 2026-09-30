@@ -38,6 +38,7 @@ abstract final class AppErrorMessages {
       RequestTimeoutException() => l10n.errorTimeoutBody,
       AuthException(reason: final reason) => switch (reason) {
           AuthFailureReason.invalidCredentials => l10n.errorAuthBody,
+          AuthFailureReason.accountLocked => l10n.errorAuthAccountLockedBody,
           AuthFailureReason.sessionExpired => l10n.errorAuthBody,
           AuthFailureReason.refreshRejected => l10n.errorAuthBody,
           AuthFailureReason.pairingRejected => l10n.errorAuthBody,

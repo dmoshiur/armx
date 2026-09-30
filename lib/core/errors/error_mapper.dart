@@ -79,8 +79,20 @@ abstract final class ErrorMapper {
         : 'Request failed${status == null ? '' : ' with status $status'}';
 
     if (status == 401 || status == 403) {
+      // The error envelope's `code` decides which auth failure the user sees; the bare
+      // status only picks a sensible default when a legacy server omits it.
+      final reason = switch (serverCode) {
+        'auth_invalid_credentials' => AuthFailureReason.invalidCredentials,
+        'auth_account_locked' => AuthFailureReason.accountLocked,
+        'auth_pairing_rejected' => AuthFailureReason.pairingRejected,
+        'auth_refresh_rejected' => AuthFailureReason.refreshRejected,
+        'auth_device_revoked' => AuthFailureReason.deviceRevoked,
+        _ => status == 401
+            ? AuthFailureReason.sessionExpired
+            : AuthFailureReason.deviceRevoked,
+      };
       return AuthException(
-        status == 401 ? AuthFailureReason.sessionExpired : AuthFailureReason.deviceRevoked,
+        reason,
         message: message,
         cause: error,
         stackTrace: stackTrace,

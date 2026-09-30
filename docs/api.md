@@ -22,6 +22,22 @@ than 60 s is discarded, and escalating the tier forces re-verification.
 
 ## REST
 
+> **Step 2 additions (client-side assumptions):** `GET /health`, `POST /auth/refresh`,
+> `POST /auth/logout`, `POST /devices/unpair`, the `pending`/`rejected` answers of
+> `POST /devices/pair` and the `423 auth_account_locked` login error were specified here
+> when the auth UI was built — the original document only defined `POST /auth/login` and
+> `POST /devices/pair` (approved). The backend must implement them as written below;
+> `MockArmxApi` already does.
+
+### `GET /health`
+
+Unauthenticated liveness probe behind the "Test connection" button.
+
+`200` → `{ "server_version": "mock-1.0.0", "requires_pairing": true, "at": "2026-09-30T11:59:00Z" }`
+
+Unreachable hosts reject the TLS handshake or time out; the client shows the network error
+verbatim (no data leaks whether any device exists).
+
 ### `POST /auth/login`
 
 ```json
@@ -47,7 +63,26 @@ than 60 s is discarded, and escalating the tier forces re-verification.
 }
 ```
 
-Errors: `401 auth_invalid_credentials`, `403 auth_pairing_rejected`, `403 auth_device_revoked`.
+Errors: `401 auth_invalid_credentials`, `403 auth_pairing_rejected`, `403 auth_device_revoked`,
+`403 auth_account_locked` (account disabled after repeated failures or by an admin — the
+client renders a dedicated localized message and does not offer immediate retry).
+
+### `POST /auth/refresh`
+
+```json
+{ "refresh_token": "…" }
+```
+
+`200` → `{ "access_token": "…", "refresh_token": "…", "expires_at": "2026-09-30T12:30:00Z" }`
+
+The refresh token is **rotated**: the old one stops working the moment a new pair is issued.
+Errors: `401 auth_refresh_rejected` (unknown/expired/rotated-away token) — the client must
+discard both tokens and return to the login screen.
+
+### `POST /auth/logout`
+
+Best effort. Requires the bearer token. `204` on success (the client deletes its local
+tokens even when the server is unreachable).
 
 ### `POST /devices/pair`
 
@@ -57,8 +92,26 @@ Registers this device's **Ed25519 public key**. The private key never leaves the
 { "public_key": "MCowBQYDK2VwAyEA…", "device_name": "Mohiur Pixel", "platform": "android" }
 ```
 
-`200` → `{ "device_id": "device-…", "device_key": "mockkey_…", "site": "home",
+`200` (approved) → `{ "device_id": "device-…", "device_key": "mockkey_…", "site": "home",
 "paired_at": "2026-09-30T11:00:00Z" }`
+
+`202` (awaiting approval) → `{ "status": "pending", "device_id": "device-…",
+"message": "Awaiting owner approval" }` — the client keeps showing the QR/fingerprint and
+re-posts the same body to poll; the `device_id` stays stable while pending.
+
+Errors: `403 auth_pairing_rejected` (the owner refused the device — the client shows the
+rejected state with a retry). `public_key` is the base64 **SPKI DER** of the Ed25519 key
+(12-byte prefix `302a300506032b6570032100` + the raw 32-byte key); the fingerprint shown
+in the UI is SHA-256 over those exact bytes.
+
+### `POST /devices/unpair`
+
+```json
+{ "device_id": "device-…" }
+```
+
+`204` — removes the registration server-side. Idempotent; the client also wipes its
+keypair and tokens locally whether or not the call succeeded.
 
 ### `GET /devices`
 

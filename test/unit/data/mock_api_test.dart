@@ -6,6 +6,7 @@ import 'package:armx_ai/data/api/mock/mock_api.dart';
 import 'package:armx_ai/data/api/ws_events.dart';
 import 'package:armx_ai/data/models/admin.dart';
 import 'package:armx_ai/data/models/audit_entry.dart';
+import 'package:armx_ai/data/models/auth.dart';
 import 'package:armx_ai/data/models/device.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -111,17 +112,145 @@ void main() {
       );
     });
 
-    test('pair returns an installable device key in the documented format', () async {
-      final result = await api.pair(
+    test('a locked account fails with its own typed reason', () async {
+      await expectLater(
+        api.login(
+          serverUrl: Uri.parse('https://api.armx.test'),
+          username: 'locked',
+          password: 'whatever',
+          deviceKey: 'mockkey_0123456789abcdef0123456789abcdef',
+        ),
+        throwsA(
+          isA<AuthException>().having(
+            (error) => error.reason,
+            'reason',
+            AuthFailureReason.accountLocked,
+          ),
+        ),
+      );
+    });
+
+    test('health reports reachability, version and TLS fingerprint', () async {
+      final probe = await api.health(Uri.parse('https://api.armx.test'));
+
+      expect(probe.reachable, isTrue);
+      expect(probe.serverVersion, 'mock-1.0.0');
+      expect(probe.tlsFingerprintMatched, isTrue);
+
+      api.control.offline = true;
+      await expectLater(
+        api.health(Uri.parse('https://api.armx.test')),
+        throwsA(isA<NetworkException>()),
+      );
+    });
+
+    test('refresh mints a new pair only for tokens the mock issued', () async {
+      final tokens = await api.refresh(
+        serverUrl: Uri.parse('https://api.armx.test'),
+        refreshToken: 'mock.refresh.abc123',
+      );
+
+      expect(tokens.accessToken, startsWith('mock.access.'));
+      expect(tokens.refreshToken, startsWith('mock.refresh.'));
+      expect(tokens.expiresAt.isAfter(Fixtures.anchor), isTrue);
+
+      await expectLater(
+        api.refresh(
+          serverUrl: Uri.parse('https://api.armx.test'),
+          refreshToken: 'bogus.token',
+        ),
+        throwsA(
+          isA<AuthException>().having(
+            (error) => error.reason,
+            'reason',
+            AuthFailureReason.refreshRejected,
+          ),
+        ),
+      );
+    });
+
+    test('pair approves by default and keeps the documented key format', () async {
+      final status = await api.pair(
         serverUrl: Uri.parse('https://api.armx.test'),
         publicKey: List<String>.filled(44, 'A').join(),
         deviceName: 'Mohiur Pixel',
         platform: 'android',
       );
 
-      expect(result.deviceKey, startsWith('mockkey_'));
-      expect(result.deviceKey.length, greaterThanOrEqualTo(40));
-      expect(result.site, 'home');
+      expect(status.state, PairingState.approved);
+      expect(status.isPaired, isTrue);
+      expect(status.result, isNotNull);
+      expect(status.result!.deviceKey, startsWith('mockkey_'));
+      expect(status.result!.deviceKey.length, greaterThanOrEqualTo(40));
+      expect(status.result!.site, 'home');
+    });
+
+    test('pair can stay pending with a stable device id until approved', () async {
+      api.control.pairingOutcome = MockPairingOutcome.pending;
+      final publicKey = List<String>.filled(44, 'B').join();
+
+      final first = await api.pair(
+        serverUrl: Uri.parse('https://api.armx.test'),
+        publicKey: publicKey,
+        deviceName: 'Mohiur Pixel',
+        platform: 'android',
+      );
+      final second = await api.pair(
+        serverUrl: Uri.parse('https://api.armx.test'),
+        publicKey: publicKey,
+        deviceName: 'Mohiur Pixel',
+        platform: 'android',
+      );
+
+      expect(first.state, PairingState.pending);
+      expect(first.isPending, isTrue);
+      expect(second.deviceId, first.deviceId);
+
+      api.control.pairingOutcome = MockPairingOutcome.approved;
+      final approved = await api.pair(
+        serverUrl: Uri.parse('https://api.armx.test'),
+        publicKey: publicKey,
+        deviceName: 'Mohiur Pixel',
+        platform: 'android',
+      );
+
+      expect(approved.state, PairingState.approved);
+      expect(approved.deviceId, first.deviceId);
+    });
+
+    test('pair reports a rejection with the pairing-rejected reason', () async {
+      api.control.pairingOutcome = MockPairingOutcome.rejected;
+
+      await expectLater(
+        api.pair(
+          serverUrl: Uri.parse('https://api.armx.test'),
+          publicKey: List<String>.filled(44, 'C').join(),
+          deviceName: 'Mohiur Pixel',
+          platform: 'android',
+        ),
+        throwsA(
+          isA<AuthException>().having(
+            (error) => error.reason,
+            'reason',
+            AuthFailureReason.pairingRejected,
+          ),
+        ),
+      );
+    });
+
+    test('unpair is idempotent and does not disturb other endpoints', () async {
+      await api.unpair(
+        serverUrl: Uri.parse('https://api.armx.test'),
+        deviceId: 'device-unknown',
+      );
+
+      final session = await api.login(
+        serverUrl: Uri.parse('https://api.armx.test'),
+        username: 'mohiur',
+        password: 'correct horse battery staple',
+        deviceKey: 'mockkey_0123456789abcdef0123456789abcdef',
+      );
+      await api.unpair(serverUrl: Uri.parse('https://api.armx.test'), deviceId: session.deviceId);
     });
   });
 

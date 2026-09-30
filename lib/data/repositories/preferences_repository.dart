@@ -1,5 +1,6 @@
 // Copyright (c) 2026 Md. Moshiur Rahman Mohi / THAMJJ13.TOP. Proprietary. All Rights Reserved.
 
+import '../../core/security/security_constants.dart';
 import '../db/armx_database.dart';
 import '../models/preferences.dart';
 
@@ -81,6 +82,10 @@ class PreferencesRepository {
   Future<void> setAppLockEnabled(bool enabled) =>
       _database.writeSetting(PreferenceKeys.appLockEnabled, enabled.toString());
 
+  /// Auto-lock timeout in background seconds (`0` | `30` | `60` | `300`).
+  Future<void> setAutoLockTimeout(int seconds) =>
+      _database.writeSetting(PreferenceKeys.autoLockTimeout, seconds.toString());
+
   /// Whether background activity recognition may run.
   Future<void> setActivityRecognitionEnabled(bool enabled) =>
       _database.writeSetting(PreferenceKeys.activityRecognitionEnabled, enabled.toString());
@@ -88,6 +93,26 @@ class PreferencesRepository {
   /// Remembers the last server URL so the pairing form is prefilled next time.
   Future<void> setLastServerUrl(String url) =>
       _database.writeSetting(PreferenceKeys.lastServerUrl, url);
+
+  /// Records where the pairing flow is (`unpaired`/`pending`/`approved`/`rejected`).
+  Future<void> setPairingStatus(String status) =>
+      _database.writeSetting(PreferenceKeys.pairingStatus, status);
+
+  /// Records the display name chosen for this device during pairing.
+  Future<void> setPairingDeviceName(String name) =>
+      _database.writeSetting(PreferenceKeys.pairingDeviceName, name);
+
+  /// Records when the pairing completed (ISO-8601).
+  Future<void> setPairingPairedAt(String isoTimestamp) =>
+      _database.writeSetting(PreferenceKeys.pairingPairedAt, isoTimestamp);
+
+  /// Whether sign-in tokens survive an app restart.
+  Future<void> setRememberDevice(bool remember) =>
+      _database.writeSetting(PreferenceKeys.rememberDevice, remember.toString());
+
+  /// Stores the signed-in profile JSON (empty when signed out).
+  Future<void> setSessionUser(String userJson) =>
+      _database.writeSetting(PreferenceKeys.sessionUser, userJson);
 
   /// Erases every preference row (used by the privacy "reset app" action).
   Future<void> resetAll() async {
@@ -114,8 +139,18 @@ class PreferencesRepository {
         ttsAutoSpeak: _bool(raw, PreferenceKeys.ttsAutoSpeak, true),
         hapticsEnabled: _bool(raw, PreferenceKeys.hapticsEnabled, true),
         appLockEnabled: _bool(raw, PreferenceKeys.appLockEnabled, true),
+        autoLockTimeoutSeconds: _int(
+          raw,
+          PreferenceKeys.autoLockTimeout,
+          SecurityConstants.defaultAutoLockSeconds,
+        ),
         activityRecognitionEnabled: _bool(raw, PreferenceKeys.activityRecognitionEnabled, false),
         lastServerUrl: _string(raw, PreferenceKeys.lastServerUrl, ''),
+        pairingStatus: _string(raw, PreferenceKeys.pairingStatus, 'unpaired'),
+        pairingDeviceName: _string(raw, PreferenceKeys.pairingDeviceName, ''),
+        pairingPairedAt: _string(raw, PreferenceKeys.pairingPairedAt, ''),
+        rememberDevice: _bool(raw, PreferenceKeys.rememberDevice, true),
+        sessionUserJson: _string(raw, PreferenceKeys.sessionUser, ''),
       );
 
   static String _string(Map<String, String> raw, String key, String fallback) {
@@ -132,4 +167,7 @@ class PreferencesRepository {
 
   static double _double(Map<String, String> raw, String key, double fallback) =>
       double.tryParse(raw[key] ?? '') ?? fallback;
+
+  static int _int(Map<String, String> raw, String key, int fallback) =>
+      int.tryParse(raw[key] ?? '') ?? fallback;
 }
