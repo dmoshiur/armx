@@ -37,6 +37,10 @@ abstract final class SecureKeys {
   /// Per-install nonce salt that prevents token replay across reinstalls.
   static const String installSalt = 'armx.device.install_salt';
 
+  /// Argon2id-hashed app-level PIN — the lock-screen fallback when the device
+  /// offers no biometrics and no screen PIN.
+  static const String appPin = 'armx.security.app_pin';
+
   /// All keys, used by the data-deletion flow.
   static const List<String> all = <String>[
     accessToken,
@@ -48,6 +52,7 @@ abstract final class SecureKeys {
     devicePublicKey,
     ownerAssertionKey,
     installSalt,
+    appPin,
   ];
 
   /// Keys that hold biometric-adjacent material and must be erased by

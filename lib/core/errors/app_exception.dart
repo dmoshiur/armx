@@ -100,6 +100,7 @@ final class AuthException extends AppException {
   @override
   String get message => switch (reason) {
         AuthFailureReason.invalidCredentials => 'Invalid credentials',
+        AuthFailureReason.accountLocked => 'Account locked',
         AuthFailureReason.sessionExpired => 'Session expired',
         AuthFailureReason.refreshRejected => 'Session refresh rejected',
         AuthFailureReason.pairingRejected => 'Pairing rejected by the server',
@@ -114,6 +115,9 @@ final class AuthException extends AppException {
 enum AuthFailureReason {
   /// Wrong username/password or device key.
   invalidCredentials,
+
+  /// The account is temporarily locked (too many attempts or an admin action).
+  accountLocked,
 
   /// The access token expired and no refresh is available.
   sessionExpired,

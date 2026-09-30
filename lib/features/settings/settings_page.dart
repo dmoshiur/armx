@@ -16,6 +16,8 @@ import '../../core/widgets/state_views.dart';
 import '../../core/widgets/status_pill.dart';
 import '../../data/models/preferences.dart';
 import '../../features/assistant_mode/assistant_listening_status_panel.dart';
+import '../auth/lock/app_lock_controller.dart';
+import '../auth/session/auth_controller.dart';
 
 /// Settings: language, theme, voice, privacy and the security switches.
 ///
@@ -197,13 +199,66 @@ class SettingsPage extends ConsumerWidget {
                 ),
                 SectionHeader(title: l10n.settingsSecuritySection),
                 ArmxTile(
-                  title: 'App lock (biometric or PIN)',
-                  subtitle: 'Uses the platform authenticator; no A.R.M.X PIN is stored',
+                  title: l10n.appLockSettingTitle,
+                  subtitle: l10n.appLockSettingSubtitle,
                   leading: const Icon(Icons.fingerprint_rounded),
                   trailing: Switch(
                     value: prefs.appLockEnabled,
-                    onChanged: repository.setAppLockEnabled,
+                    onChanged: (value) => _setAppLock(ref, prefs, value),
                   ),
+                ),
+                ArmxTile(
+                  title: l10n.appLockTimeoutTitle,
+                  subtitle: _autoLockLabel(l10n, prefs.autoLockTimeoutSeconds),
+                  leading: const Icon(Icons.timer_outlined),
+                ),
+                GlassPanel(
+                  child: SegmentedButton<int>(
+                    segments: <ButtonSegment<int>>[
+                      ButtonSegment<int>(
+                        value: SecurityConstants.autoLockTimeoutOptions[0],
+                        label: Text(l10n.appLockTimeoutImmediate),
+                        icon: const Icon(Icons.flash_off_outlined),
+                      ),
+                      ButtonSegment<int>(
+                        value: SecurityConstants.autoLockTimeoutOptions[1],
+                        label: Text(l10n.appLockTimeout30s),
+                        icon: const Icon(Icons.timer_outlined),
+                      ),
+                      ButtonSegment<int>(
+                        value: SecurityConstants.autoLockTimeoutOptions[2],
+                        label: Text(l10n.appLockTimeout60s),
+                        icon: const Icon(Icons.hourglass_bottom_rounded),
+                      ),
+                      ButtonSegment<int>(
+                        value: SecurityConstants.autoLockTimeoutOptions[3],
+                        label: Text(l10n.appLockTimeout300s),
+                        icon: const Icon(Icons.schedule_rounded),
+                      ),
+                    ],
+                    selected: <int>{
+                      SecurityConstants.autoLockTimeoutOptions
+                              .contains(prefs.autoLockTimeoutSeconds)
+                          ? prefs.autoLockTimeoutSeconds
+                          : SecurityConstants.defaultAutoLockSeconds,
+                    },
+                    onSelectionChanged: (selection) =>
+                        _setAutoLockTimeout(ref, prefs, selection.first),
+                    showSelectedIcon: false,
+                  ),
+                ),
+                ArmxTile(
+                  title: l10n.sessionSignOut,
+                  subtitle: l10n.sessionSignOutSubtitle,
+                  leading: const Icon(Icons.logout_rounded),
+                  onTap: () => _confirmSignOut(context, ref),
+                ),
+                ArmxTile(
+                  title: l10n.sessionUnpair,
+                  subtitle: l10n.sessionUnpairSubtitle,
+                  leading: const Icon(Icons.link_off_rounded),
+                  accent: colors.red,
+                  onTap: () => _confirmUnpair(context, ref),
                 ),
                 SectionHeader(
                   title: l10n.settingsPrivacySection,
@@ -254,6 +309,36 @@ class SettingsPage extends ConsumerWidget {
     );
   }
 
+  /// Persists the app-lock toggle and re-configures the live gate in one step.
+  Future<void> _setAppLock(WidgetRef ref, AppPreferences prefs, bool enabled) async {
+    await ref.read(preferencesRepositoryProvider).setAppLockEnabled(enabled);
+    await ref
+        .read(appLockControllerProvider.notifier)
+        .configure(enabled: enabled, timeoutSeconds: prefs.autoLockTimeoutSeconds);
+  }
+
+  /// Persists the auto-lock timeout and re-configures the live gate.
+  Future<void> _setAutoLockTimeout(WidgetRef ref, AppPreferences prefs, int seconds) async {
+    await ref.read(preferencesRepositoryProvider).setAutoLockTimeout(seconds);
+    await ref
+        .read(appLockControllerProvider.notifier)
+        .configure(enabled: prefs.appLockEnabled, timeoutSeconds: seconds);
+  }
+
+  /// Localized label for the stored auto-lock timeout (unknown values fall back
+  /// to the default option so the selector never renders an empty selection).
+  String _autoLockLabel(AppLocalizations l10n, int seconds) {
+    final safe = SecurityConstants.autoLockTimeoutOptions.contains(seconds)
+        ? seconds
+        : SecurityConstants.defaultAutoLockSeconds;
+    return switch (safe) {
+      0 => l10n.appLockTimeoutImmediate,
+      30 => l10n.appLockTimeout30s,
+      60 => l10n.appLockTimeout60s,
+      _ => l10n.appLockTimeout300s,
+    };
+  }
+
   Future<void> _confirmBiometricDeletion(BuildContext context, WidgetRef ref) async {
     final l10n = context.l10n;
     final confirmed = await showDialog<bool>(
@@ -279,6 +364,62 @@ class SettingsPage extends ConsumerWidget {
     );
     if (confirmed ?? false) {
       await ref.read(preferencesRepositoryProvider).setCameraEnabled(false);
+    }
+  }
+
+  Future<void> _confirmSignOut(BuildContext context, WidgetRef ref) async {
+    final l10n = context.l10n;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: ArmxColors.of(context).panel,
+        title: Text(l10n.sessionSignOutTitle),
+        content: Text(l10n.sessionSignOutBody),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: Text(l10n.commonCancel),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: Text(l10n.sessionSignOut),
+          ),
+        ],
+      ),
+    );
+    if (confirmed ?? false) {
+      await ref.read(authControllerProvider.notifier).signOut();
+      if (context.mounted) {
+        context.go(AppRoutes.login);
+      }
+    }
+  }
+
+  Future<void> _confirmUnpair(BuildContext context, WidgetRef ref) async {
+    final l10n = context.l10n;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: ArmxColors.of(context).panel,
+        title: Text(l10n.sessionUnpairTitle),
+        content: Text(l10n.sessionUnpairBody),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: Text(l10n.commonCancel),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: Text(l10n.sessionUnpair),
+          ),
+        ],
+      ),
+    );
+    if (confirmed ?? false) {
+      await ref.read(authControllerProvider.notifier).unpair();
+      if (context.mounted) {
+        context.go(AppRoutes.pairing);
+      }
     }
   }
 }

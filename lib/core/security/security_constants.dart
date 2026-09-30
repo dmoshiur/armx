@@ -35,4 +35,13 @@ abstract final class SecurityConstants {
 
   /// Minimum password length accepted by the login form.
   static const int minPasswordLength = 8;
+
+  /// Background seconds offered for the auto-lock timeout (`0` = immediately).
+  static const List<int> autoLockTimeoutOptions = <int>[0, 30, 60, 300];
+
+  /// Default auto-lock timeout after the app is backgrounded (seconds).
+  static const int defaultAutoLockSeconds = 30;
+
+  /// How long before `expires_at` the client proactively refreshes the access token.
+  static const Duration tokenRefreshLeeway = Duration(seconds: 60);
 }

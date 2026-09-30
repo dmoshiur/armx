@@ -37,6 +37,22 @@ part 'mock_device_domain.dart';
 part 'mock_rule_domain.dart';
 part 'mock_unlock_domain.dart';
 
+/// Deterministic outcomes the mock can answer for `POST /devices/pair`.
+///
+/// The demo/test flips [MockBackendControl.pairingOutcome] between calls, so a
+/// `pending` request can be re-polled later and observe the approval — exactly the
+/// state machine the pairing screen is built against.
+enum MockPairingOutcome {
+  /// The owner approves immediately (default).
+  approved,
+
+  /// The request stays queued as `pending` until the knob changes.
+  pending,
+
+  /// The owner refuses the device (`403 auth_pairing_rejected`).
+  rejected,
+}
+
 /// Fault-injection and pacing knobs for the mock backend.
 ///
 /// The demo builds wire these to on-screen switches so a tester can watch the app deal with
@@ -47,6 +63,7 @@ class MockBackendControl {
     this.latency = const Duration(milliseconds: 140),
     this.offline = false,
     this.failNext = false,
+    this.pairingOutcome = MockPairingOutcome.approved,
     this.toolCallDelay = const Duration(milliseconds: 900),
     this.tokenInterval = const Duration(milliseconds: 45),
   });
@@ -59,6 +76,10 @@ class MockBackendControl {
 
   /// When true the next call throws a 503 [ApiException], then resets.
   bool failNext;
+
+  /// What `POST /devices/pair` answers; flip `pending → approved` to simulate the
+  /// owner tapping Approve in the admin panel.
+  MockPairingOutcome pairingOutcome;
 
   /// Delay before a tool call reports its result.
   Duration toolCallDelay;

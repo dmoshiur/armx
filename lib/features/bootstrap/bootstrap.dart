@@ -5,8 +5,10 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../../core/config/app_config.dart';
 import '../../core/errors/app_exception.dart';
 import '../../core/providers.dart';
-import '../../core/security/secure_store.dart';
 import '../../data/models/preferences.dart';
+import '../auth/lock/app_lock_controller.dart';
+import '../auth/pairing/pairing_controller.dart';
+import '../auth/session/auth_controller.dart';
 
 part 'bootstrap.g.dart';
 
@@ -72,6 +74,24 @@ Future<BootstrapReport> bootstrap(Ref ref) async {
       stackTrace: stackTrace,
     );
   }
+
+  // Step-2 restore sequence, in spec order: pairing → auth → app lock. The
+  // bootstrap gate only navigates once this provider completes, so the very
+  // first redirect already sees the restored gates (each restore is
+  // idempotent, so a retry after a fatal error cannot double-apply).
+  try {
+    await ref.read(pairingControllerProvider.notifier).restore();
+  } on Object catch (error) {
+    // Corrupt stored material must not brick launch: pairing falls back to
+    // "unpaired" (fail-closed) and the flow starts over on the pairing screen.
+    logger.w('bootstrap: pairing restore failed (${error.runtimeType})');
+  }
+  await ref.read(authControllerProvider.notifier).restore();
+  final phase = ref.read(authControllerProvider).phase;
+  await ref.read(appLockControllerProvider.notifier).restore(
+        sessionRestored: phase == AuthPhase.signedIn ||
+            phase == AuthPhase.sessionExpiring,
+      );
 
   if (config.useMockBackend) {
     warnings.add('Running against the in-app mock backend (USE_MOCK=true).');

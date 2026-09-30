@@ -13,6 +13,8 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <!-- Light haptic acknowledgement after an on-device wake-word match. -->
     <uses-permission android:name="android.permission.VIBRATE" />
+    <!-- Biometric / device-credential prompt shown by the step-2 app-lock gate (local_auth). -->
+    <uses-permission android:name="android.permission.USE_BIOMETRIC" />
 
     <!-- The rest of A.R.M.X remains installable on devices without a microphone. -->
     <uses-feature android:name="android.hardware.microphone" android:required="false" />
