@@ -57,7 +57,7 @@ flutter run -d linux
 | `LOG_LEVEL` | `info` | `trace`, `debug`, `info`, `warning`, `error`, `off`. |
 | `CERT_PINS` | empty | Comma-separated SHA-256 SPKI pins for the certificate-pinning hook. Empty = pinning disabled (development only). |
 | `MOCK_LATENCY_MS` | `120` | Simulated round-trip latency so loading states are visible. |
-| `WAKE_WORD_ENGINE` | `stub` | `stub` (no audio) or a registered engine id (see below). |
+| `WAKE_WORD_ENGINE` | `stub` | Reserved configuration; Android currently selects the native no-audio stub regardless of this define (see below). |
 | `FACE_MATCH_THRESHOLD` | `0.72` | Cosine-similarity threshold for a face match (clamped to 0.10–0.99). |
 | `TELEMETRY` | `false` | Opt-in only. Never includes biometrics or tokens. |
 
@@ -67,17 +67,20 @@ secret store, and stored at rest in `flutter_secure_storage`.
 
 ## 4. Wake word
 
-Wake-word detection sits behind `WakeWordEngine` (`features/voice/`). The default `stub`
-engine never opens the microphone and reports `unavailable`, so push-to-talk is the only
-audio path until an engine is registered. To wire a real one:
+Android wake-word engines implement the native `WakeWordEngine` contract in
+`android/app/src/main/kotlin/top/thamjj13/armx/voice/`. The foreground service owns the
+engine lifecycle. Its factory currently selects `StubWakeWordEngine`, which never opens the
+microphone and never emits a wake event; Android background voice capture is therefore not
+active yet. No push-to-talk/STT voice flow is present in this checkout either; use text chat.
 
-1. add the plugin (for example `picovoice_porcupine` or an openWakeWord FFI binding);
-2. implement `WakeWordEngine` with the engine id you pass to `WAKE_WORD_ENGINE`;
-3. register it in the voice feature's engine list.
+To register a real adapter, implement `WakeWordEngine` and change the factory only after the
+deployment has selected an engine, model, licensing, and privacy review. The stub currently
+remains selected regardless of the reserved `WAKE_WORD_ENGINE` Dart define; that define is
+not read by the native service. The boundary and privacy requirements are in
+[`assistant-mode.md`](assistant-mode.md) and [`wake-word-adapters.md`](wake-word-adapters.md).
 
-Porcupine needs a licensed AccessKey and openWakeWord needs an ONNX/TFLite model plus the
-"Armex" wake phrase trained — both are deployment decisions, which is why neither is in the
-dependency list.
+Porcupine requires a licensed AccessKey; openWakeWord requires an ONNX/TFLite runtime and a
+model trained for "Armex". Neither engine package, runtime, key, nor model is bundled here.
 
 ## 5. Tests
 
@@ -107,7 +110,7 @@ flutter test --update-goldens test/golden
 | `part 'x.freezed.dart'` missing | Run `dart run build_runner build --delete-conflicting-outputs`. |
 | Every request fails with a network error | `MockBackendControl.offline` is switched on (Diagnostics screen) or `USE_MOCK=false` with no server. |
 | Vision screen shows "model missing" | Drop `face_embedding.tflite` into `assets/models/` — see that folder's README. |
-| Wake word never fires | Expected with `WAKE_WORD_ENGINE=stub`; use push-to-talk or wire an engine. |
+| Wake word never fires | Expected: the native service still uses `StubWakeWordEngine`, which opens no microphone. Wire and review a real adapter before enabling capture. |
 | `flutter test` golden failures after a theme tweak | Re-run with `--update-goldens` **after** confirming the visual change is intentional. |
 
 ## 7. Security checklist for a build

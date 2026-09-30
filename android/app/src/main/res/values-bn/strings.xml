@@ -1,0 +1,13 @@
+<!-- Copyright (c) 2026 Md. Moshiur Rahman Mohi / THAMJJ13.TOP. Proprietary. All Rights Reserved. -->
+<resources>
+    <string name="app_name">A.R.M.X AI</string>
+    <string name="listen_notification_channel">সহায়ক শোনার সার্ভিস</string>
+    <string name="listen_notification_channel_description">A.R.M.X ফরগ্রাউন্ড সার্ভিস চালু থাকলে এই স্থায়ী বিজ্ঞপ্তি দেখা যায়।</string>
+    <string name="listen_notification_title">A.R.M.X সহায়ক সার্ভিস</string>
+    <string name="listen_notification_engine_pending">সার্ভিস চালু। ওয়েক-ওয়ার্ড ইঞ্জিন যুক্ত হয়নি; কোনো অডিও সংগ্রহ করা হচ্ছে না।</string>
+    <string name="listen_notification_paused">সহায়ক সার্ভিস বিরতিতে আছে।</string>
+    <string name="listen_action_talk">কথা বলুন</string>
+    <string name="listen_action_pause">শোনা বিরতি দিন</string>
+    <string name="listen_action_resume">শোনা আবার চালু করুন</string>
+    <string name="listen_action_kill_switch">KILL-SWITCH</string>
+</resources>

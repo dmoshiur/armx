@@ -15,6 +15,7 @@ import '../../core/widgets/armx_controls.dart';
 import '../../core/widgets/state_views.dart';
 import '../../core/widgets/status_pill.dart';
 import '../../data/models/preferences.dart';
+import '../../features/assistant_mode/assistant_listening_status_panel.dart';
 
 /// Settings: language, theme, voice, privacy and the security switches.
 ///
@@ -132,6 +133,11 @@ class SettingsPage extends ConsumerWidget {
                     ),
                   ),
                 ),
+                SectionHeader(
+                  title: l10n.assistantModeSection,
+                  subtitle: l10n.assistantModeSubtitle,
+                ),
+                const AssistantListeningStatusPanel(),
                 ArmxTile(
                   title: 'Speak replies automatically',
                   leading: const Icon(Icons.volume_up_outlined),

@@ -34,6 +34,9 @@ enum PlatformFeature {
   /// Hardware-backed key/value storage.
   secureStorage,
 
+  /// Ability to keep an Android foreground listening-service shell active.
+  backgroundAssistant,
+
   /// Ability to block screenshots/screen recording for sensitive screens.
   screenshotGuard,
 }
@@ -75,6 +78,8 @@ abstract final class PlatformCapabilities {
       PlatformFeature.activityRecognition => _mobileOnly.contains(target),
       PlatformFeature.geolocation => _geolocationSupport.contains(target),
       PlatformFeature.secureStorage => true,
+      // Native foreground listening is implemented for Android only in this delivery.
+      PlatformFeature.backgroundAssistant => target == TargetPlatform.android,
       PlatformFeature.screenshotGuard => target == TargetPlatform.android,
     };
   }
@@ -107,6 +112,8 @@ abstract final class PlatformCapabilities {
         'No biometric/device-credential provider on ${_name(target)}.',
       PlatformFeature.geolocation =>
         'Location services are unavailable on ${_name(target)}.',
+      PlatformFeature.backgroundAssistant =>
+        'The foreground listening-service shell is implemented for Android only; desktop support is planned for a later delivery.',
       PlatformFeature.screenshotGuard =>
         'Screenshot blocking is implemented with the Android FLAG_SECURE flag only.',
       PlatformFeature.secureStorage => 'Secure storage backend unavailable.',
