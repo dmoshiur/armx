@@ -11,6 +11,7 @@ import '../../features/auth/pairing/pairing_controller.dart';
 import '../../features/auth/pairing/pairing_page.dart';
 import '../../features/auth/session/auth_controller.dart';
 import '../../features/bootstrap/bootstrap_gate.dart';
+import '../../features/chat/chat_page.dart';
 import '../../features/common/placeholder_page.dart';
 import '../../features/dev/design_system_page.dart';
 import '../../features/settings/about_page.dart';
@@ -130,11 +131,7 @@ GoRouter appRouter(Ref ref) {
               GoRoute(
                 path: AppRoutes.chat,
                 name: 'chat',
-                builder: (context, state) => const PlaceholderPage(
-                  title: 'Assistant chat',
-                  step: 3,
-                  icon: Icons.forum_rounded,
-                ),
+                builder: (context, state) => const ChatPage(),
               ),
             ],
           ),

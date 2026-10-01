@@ -22,7 +22,7 @@ privately hosted home/estate assistant.
 | --- | --- | --- |
 | 1 | Setup, theme, router, l10n, skeleton, mock backend | ✅ delivered |
 | 2 | Auth, pairing, app lock | ✅ delivered |
-| 3 | Chat + WebSocket + tool approval cards | ⏳ next |
+| 3 | Chat + WebSocket + tool approval cards | ✅ delivered |
 | 4 | Voice (push-to-talk, wake word, TTS) | |
 | 5 | Dashboard + devices | |
 | 6 | Admin, kill-switch, audit | |
@@ -32,9 +32,15 @@ privately hosted home/estate assistant.
 | 10 | Settings polish, full test suite, release docs | |
 
 Step 1 ships the design system, the five-tab shell, the routing table, English + Bengali
-localization (161 keys each), the security core (`RiskPolicy`, evidence, secure storage), the
-data layer (models, Drift schema, preferences) and a mock backend that behaves like the real
-one — including a working kill-switch and streaming assistant.
+localization, the security core (`RiskPolicy`, evidence, secure storage), the data layer
+(models, Drift schema, preferences) and a mock backend that behaves like the real one —
+including a working kill-switch and streaming assistant.
+
+Steps 2–3 add pairing, sign-in, the LOW-tier app-lock gate, and the assistant conversation
+tab: a streaming transcript over the WebSocket event contract, tool approval cards that
+enforce the risk tiers (LOW runs immediately, MEDIUM/HIGH require an explicit decision
+after on-device verification), reconnect with exponential backoff, and an offline transcript
+cache. See [`docs/step-3-report.md`](docs/step-3-report.md).
 
 ### Background assistant add-on
 
@@ -74,7 +80,7 @@ lib/
     api/       ArmxApi contract, WebSocket codec, deterministic mock backend
     db/        Drift database + tables (offline cache, prefs, outbox)
     models/    freezed/json_serializable models for every wire object
-    repositories/  app preferences (theme, language, thresholds)
+    repositories/  app preferences (theme, language, thresholds), chat transcript cache
   features/    auth, chat, voice, dashboard, devices, vision, activity, unlock, admin, settings, shell
   l10n/        app_en.arb, app_bn.arb
 assets/fonts/  Inter + JetBrains Mono (bundled, no network fonts)

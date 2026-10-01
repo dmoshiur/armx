@@ -230,6 +230,17 @@ malformed frame.
 Reconnect uses exponential backoff with jitter; the client re-authenticates with the refresh
 token before resubscribing.
 
+> **Step 3 additions (client behaviour):** the chat screen folds the frames above into a
+> transcript. `tool.request` opens an Approve/Deny card whose behaviour is driven by the
+> risk tier: **LOW** calls are approved by the client without a card and the server answers
+> with a plain `tool.result`; **MEDIUM/HIGH** cards require an explicit decision and, before
+> an approval is sent, `RiskPolicy` must be satisfied by fresh (≤ 60 s) face/voice — plus a
+> system biometric for HIGH — evidence captured on-device. For HIGH the client additionally
+> sends the single-use `owner_verified` assertion with `decideToolCall`. A `system.killed`
+> frame blocks the composer, expires every pending card and drops the captured evidence
+> (fail closed); the server closes the socket at the same moment, and the client reconnects
+> with backoff before resubscribing.
+
 ## Errors
 
 Every non-2xx response uses the same envelope:

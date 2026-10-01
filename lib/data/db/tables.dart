@@ -31,7 +31,7 @@ class ChatMessagesCache extends Table {
   /// Conversation this message belongs to.
   TextColumn get conversationId => text()();
 
-  /// `user`, `assistant`, `system`, `tool` (wire value).
+  /// `USER`, `ASSISTANT`, `SYSTEM` or `TOOL` (wire value of `ChatRole`).
   TextColumn get role => text()();
 
   /// Message body as plain text.
@@ -40,7 +40,8 @@ class ChatMessagesCache extends Table {
   /// Creation instant (UTC).
   DateTimeColumn get at => dateTime()();
 
-  /// Delivery status (wire value).
+  /// Delivery status (`SENDING`, `STREAMING`, `SENT`, `FAILED`, `BLOCKED` — wire
+  /// value of `ChatMessageStatus`).
   TextColumn get status => text()();
 
   /// Risk tier of an attached tool call, if any (`LOW`/`MEDIUM`/`HIGH`).

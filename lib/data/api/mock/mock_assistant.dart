@@ -66,6 +66,23 @@ abstract final class MockAssistant {
         ),
       );
     }
+    if (text.contains('status') || text.contains('snapshot')) {
+      // LOW tier: the mock runs it immediately (see MockChatDomain._stream),
+      // so the chat screen can show the "no approval card" path.
+      return MockAssistantScript(
+        replyText: 'Here is the read-only status snapshot: Living Room Lights '
+            'ONLINE, Main Gate OFFLINE, Greenhouse node ONLINE, Front Door LOCKED.',
+        messageId: messageId,
+        toolCall: ToolCall(
+          id: 'call-status-1',
+          toolName: 'devices.list',
+          parameters: const <String, Object?>{'scope': 'all'},
+          riskTier: RiskTier.low,
+          requestedAt: now,
+          reason: 'Read-only status snapshot requested by the owner.',
+        ),
+      );
+    }
     if (text.contains('gate')) {
       return MockAssistantScript(
         replyText: 'The gate is a HIGH risk device: face, voice and your device '

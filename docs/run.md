@@ -100,6 +100,11 @@ Step-2 suites live in `test/unit/features/auth/` (PIN store, auto-lock policy, r
 limiter, session refresh, pairing machine), `test/unit/data/auth_interceptor_test.dart`,
 `test/widget/auth/` (pairing, login, lock) and `test/golden/auth_golden_test.dart`.
 
+Step-3 suites live in `test/unit/features/chat/chat_controller_test.dart` (streaming,
+LOW/MEDIUM/HIGH approvals, kill-switch, failed-send retry, transcript persistence) and
+`test/widget/chat/chat_page_test.dart` (empty state, streamed reply + approval cards,
+denial, kill-switch banner, Bengali rendering).
+
 Goldens are regenerated deliberately, never automatically:
 
 ```bash

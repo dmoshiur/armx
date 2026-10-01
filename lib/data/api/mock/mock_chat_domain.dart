@@ -67,17 +67,34 @@ mixin MockChatDomain on MockArmxApi {
       blocked: false,
     ));
     final call = script.toolCall;
-    if (call != null && call.riskTier.isAtLeast(RiskTier.medium)) {
-      await Future<void>.delayed(const Duration(milliseconds: 120));
-      _emit(ToolRequestEvent(
+    if (call == null) {
+      _logger.d('mock: streamed reply for "$prompt" in ${chunks.length} tokens since $startedAt');
+      return;
+    }
+    if (call.riskTier == RiskTier.low) {
+      // LOW risk runs immediately: no approval card, the result arrives directly.
+      await Future<void>.delayed(control.toolCallDelay);
+      if (_disposed || generation != _streamGeneration || _killSwitchEngaged) {
+        return;
+      }
+      _applyToolEffect(call);
+      _emit(ToolResultEvent(
         receivedAt: _clock.now().toUtc(),
         toolCallId: call.id,
-        toolName: call.toolName,
-        parameters: call.parameters,
-        riskTier: call.riskTier,
-        reason: call.reason,
+        success: true,
+        summary: '${call.toolName} executed (mock, LOW tier — no approval needed).',
       ));
+      return;
     }
+    await Future<void>.delayed(const Duration(milliseconds: 120));
+    _emit(ToolRequestEvent(
+      receivedAt: _clock.now().toUtc(),
+      toolCallId: call.id,
+      toolName: call.toolName,
+      parameters: call.parameters,
+      riskTier: call.riskTier,
+      reason: call.reason,
+    ));
     _logger.d('mock: streamed reply for "$prompt" in ${chunks.length} tokens since $startedAt');
   }
 

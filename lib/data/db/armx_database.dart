@@ -93,6 +93,20 @@ class ArmxDatabase extends _$ArmxDatabase {
   Future<int> clearConversation(String conversationId) =>
       (delete(chatMessagesCache)..where((t) => t.conversationId.equals(conversationId))).go();
 
+  /// Conversation id of the newest cached row, or `null` when the cache is empty.
+  ///
+  /// Lets the chat screen resume the previous transcript instead of silently
+  /// starting a new conversation on every cold start.
+  Future<String?> mostRecentConversationId() async {
+    final query = select(chatMessagesCache)
+      ..orderBy(<OrderClauseGenerator<$ChatMessagesCacheTable>>[
+        ($ChatMessagesCacheTable t) => OrderingTerm.desc(t.at),
+      ])
+      ..limit(1);
+    final row = await query.getSingleOrNull();
+    return row?.conversationId;
+  }
+
   // ---- Audit cache ---------------------------------------------------------
 
   /// Cached audit entries, newest first.

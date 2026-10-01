@@ -7,12 +7,14 @@ import '../data/api/armx_api.dart';
 import '../data/api/mock/mock_api.dart';
 import '../data/db/armx_database.dart';
 import '../data/models/preferences.dart';
+import '../data/repositories/chat_repository.dart';
 import '../data/repositories/preferences_repository.dart';
 import 'config/app_config.dart';
 import 'errors/app_exception.dart';
 import 'logging/armx_logger.dart';
 import 'security/secure_store.dart';
 import 'security/secure_screen.dart';
+import 'security/verification_gateway.dart';
 import 'utils/clock.dart';
 
 part 'providers.g.dart';
@@ -57,6 +59,19 @@ ArmxDatabase armxDatabase(Ref ref) => ArmxDatabase.open();
 PreferencesRepository preferencesRepository(Ref ref) =>
     PreferencesRepository(ref.watch(armxDatabaseProvider));
 
+/// Chat transcript persistence (offline cache of the conversation).
+@Riverpod(keepAlive: true)
+ChatRepository chatRepository(Ref ref) => ChatRepository(ref.watch(armxDatabaseProvider));
+
+/// On-device verification gateway (face / voice / system biometric prompts).
+///
+/// Defaults to the deterministic [SimulatedVerificationGateway] until the real
+/// biometric pipelines land (voice = step 4, vision = step 7); tests override it
+/// with a fake to exercise cancellation and failure paths.
+@Riverpod(keepAlive: true)
+VerificationGateway verificationGateway(Ref ref) =>
+    SimulatedVerificationGateway(clock: ref.watch(clockProvider));
+
 /// Reactive preference snapshot (theme, locale, wake word, thresholds).
 @Riverpod(keepAlive: true)
 Stream<AppPreferences> appPreferences(Ref ref) =>
@@ -64,10 +79,10 @@ Stream<AppPreferences> appPreferences(Ref ref) =>
 
 /// The A.R.M.X backend contract.
 ///
-/// With `--dart-define=USE_MOCK=true` (the default while the backend does not exist) this
-/// returns the deterministic in-app mock. The REST/WebSocket implementation arrives with
-/// step 2 (auth), so a non-mock build fails fast with a clear message instead of silently
-/// pretending to be connected.
+/// With `--dart-define=USE_MOCK=true` (the default while the backend does not
+/// exist) this returns the deterministic in-app mock. The REST/WebSocket
+/// transport is not wired yet, so a non-mock build fails fast with a clear
+/// message instead of silently pretending to be connected.
 @Riverpod(keepAlive: true)
 ArmxApi armxApi(Ref ref) {
   final config = ref.watch(appConfigProvider);
