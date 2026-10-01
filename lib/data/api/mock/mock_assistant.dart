@@ -4,7 +4,6 @@ import 'dart:math';
 
 import '../../../core/security/risk_tier.dart';
 import '../../models/chat.dart';
-import 'mock_data.dart';
 
 /// A scripted assistant turn produced by the mock backend.
 class MockAssistantScript {

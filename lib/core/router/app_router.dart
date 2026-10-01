@@ -22,6 +22,7 @@ import '../../features/settings/about_page.dart';
 import '../../features/settings/diagnostics_page.dart';
 import '../../features/settings/settings_page.dart';
 import '../../features/shell/app_shell.dart';
+import '../../features/voice/voice_page.dart';
 import 'routes.dart';
 
 part 'app_router.g.dart';
@@ -227,6 +228,11 @@ GoRouter appRouter(Ref ref) {
             path: 'desktop-readiness',
             name: 'desktopReadiness',
             builder: (context, state) => const BackgroundReadinessPage(),
+          ),
+          GoRoute(
+            path: 'voice',
+            name: 'voice',
+            builder: (context, state) => const VoicePage(),
           ),
           GoRoute(
             path: 'talk',

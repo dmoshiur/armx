@@ -7,7 +7,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/config/app_info.dart';
 import '../../core/errors/app_exception.dart';
 import '../../core/l10n/l10n.dart';
-import '../../core/logging/armx_logger.dart';
 import '../../core/providers.dart';
 import '../../core/theme/armx_colors.dart';
 import '../../core/widgets/ambient_background.dart';

@@ -8,11 +8,8 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../core/errors/app_exception.dart';
 import '../../core/providers.dart';
-import '../../core/services/intercom_audio.dart';
-import '../../core/platform/silence_probe.dart';
 import '../../data/api/ws_events.dart';
 import '../../data/models/announcement.dart';
-import '../../data/repositories/announcement_repository.dart';
 import 'intercom_state.dart';
 
 part 'intercom_controller.g.dart';

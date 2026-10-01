@@ -3,6 +3,7 @@
 import 'package:flutter/material.dart';
 
 import '../theme/armx_colors.dart';
+import 'armx_wordmark.dart';
 
 /// Standard app bar with an optional wordmark title and a slot for the kill-switch.
 class ArmxAppBar extends StatelessWidget implements PreferredSizeWidget {

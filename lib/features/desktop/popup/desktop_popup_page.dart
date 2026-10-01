@@ -18,7 +18,6 @@ import '../../chat/widgets/chat_bubble.dart';
 import '../../chat/widgets/tool_approval_card.dart';
 import '../../../data/models/chat.dart';
 import '../desktop_controller.dart';
-import '../desktop_state.dart';
 
 /// The desktop popup card: frameless, always-on-top, dismissed by Esc or click-outside.
 ///
