@@ -1,0 +1,97 @@
+# Copyright (c) 2026 Md. Moshiur Rahman Mohi / THAMJJ13.TOP. Proprietary. All Rights Reserved.
+#
+# Verification pipeline for A.R.M.X AI.
+#
+# It runs exactly the sequence documented in docs/run.md and docs/verification.md:
+#   1. resolve the pinned dependency graph;
+#   2. generate sources (freezed / json_serializable / drift / riverpod / gen-l10n);
+#   3. offline structural checks (tool/static_checks.py) — fast, SDK-independent guards;
+#   4. `flutter analyze` (must be warning-free);
+#   5. `flutter test --coverage` + the 70 % line-coverage gate over core/ and data/.
+#
+# The integration test (`integration_test/auth_flow_test.dart`) needs a device/emulator or
+# a desktop display, so it only runs on a manual dispatch.
+
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+      - 'arena/**'
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  verify:
+    name: analyze · test · coverage
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # The toolchain is pinned to the version named in pubspec.yaml. If this exact build is
+      # not published on the stable channel yet, move the pin forward *together* with
+      # pubspec.yaml's `environment:` block (see docs/decisions/0002-dependency-pins.md).
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 3.47.5
+          channel: stable
+          cache: true
+
+      - name: Toolchain versions
+        run: flutter --version
+
+      - name: Resolve dependencies (exact pins, no ranges)
+        run: flutter pub get
+
+      - name: Generate sources (freezed / json / drift / riverpod)
+        run: dart run build_runner build --delete-conflicting-outputs
+
+      - name: Generate localizations (EN + BN)
+        run: flutter gen-l10n
+
+      - name: Offline structural checks (headers, imports, ARB parity, secrets)
+        run: python3 tool/static_checks.py
+
+      - name: flutter analyze
+        run: flutter analyze
+
+      - name: Flutter unit + widget + golden tests
+        run: flutter test --coverage
+
+      - name: Coverage gate (core/ + data/ ≥ 70 %)
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq lcov
+          lcov --remove coverage/lcov_coverage.info \
+            'lib/features/*' 'lib/l10n/*' '**/*.g.dart' '**/*.freezed.dart' \
+            -o coverage/core_data.info
+          lcov --summary coverage/core_data.info
+          python3 tool/coverage_gate.py coverage/core_data.info 70
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-core-data
+          path: coverage/core_data.info
+          if-no-files-found: ignore
+
+  integration:
+    name: integration test (manual dispatch)
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 3.47.5
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - run: dart run build_runner build --delete-conflicting-outputs
+      - run: flutter gen-l10n
+      - name: Integration flow (pair → approve → chat → kill-switch)
+        uses: GabrielBB/xvfb-action@v1
+        with:
+          run: flutter test integration_test/auth_flow_test.dart
