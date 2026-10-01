@@ -25,7 +25,7 @@ privately hosted home/estate assistant.
 | 3 | Chat + WebSocket + tool approval cards | ✅ delivered |
 | 3+ | **Desktop background + hotkey mode** (tray, global hotkey, autostart, popup) | ✅ delivered |
 | 3+ | **Walkie-talkie voice intercom** (Admin announcements, opt-in, mutual log) | ✅ delivered |
-| 4 | Voice (push-to-talk, wake word, TTS) | |
+| 4 | Voice (push-to-talk, wake word, TTS) | ✅ delivered |
 | 5 | Dashboard + devices | |
 | 6 | Admin, kill-switch, audit | |
 | 7 | Vision (face enrolment, palm gesture) | |
@@ -46,6 +46,16 @@ cache. See [`docs/step-3-report.md`](docs/step-3-report.md).
 
 The desktop background mode and the walkie-talkie intercom are reported in
 [`docs/step-4-report.md`](docs/step-4-report.md).
+
+### Voice pipeline
+
+Step 4 adds the voice path end to end: hold-to-talk with live partial transcripts, a
+wake-word mode that runs behind the platform's **visible** listener (or refuses with
+`background_listening_unsupported`), spoken assistant replies in English and Bengali, and
+the on-device voice factor used by the verification stack. The microphone is a local,
+default-OFF privacy switch; simulated engines are labelled as simulated everywhere. Voice
+alone never satisfies a risk tier — the `RiskPolicy` refusal is pinned by a regression test.
+See [`docs/voice.md`](docs/voice.md).
 
 ### Desktop background mode + walkie-talkie intercom
 

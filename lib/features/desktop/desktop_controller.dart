@@ -8,7 +8,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
-import '../../core/platform/autostart_service.dart';
 import '../../core/platform/desktop_shell.dart';
 import '../../core/platform/device_availability.dart';
 import '../../core/providers.dart';

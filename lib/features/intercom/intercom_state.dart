@@ -2,7 +2,6 @@
 
 import 'package:flutter/foundation.dart';
 
-import '../../core/platform/silence_probe.dart';
 import '../../data/models/announcement.dart';
 
 /// What the receiving device is doing with an incoming announcement.

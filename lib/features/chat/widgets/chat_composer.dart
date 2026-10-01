@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../../../core/theme/armx_colors.dart';
 import '../../../core/theme/armx_effects.dart';
+import '../../../core/theme/armx_theme.dart';
 import '../../../core/widgets/armx_controls.dart';
 import '../../../core/widgets/armx_text_field.dart';
 
@@ -20,8 +21,24 @@ class ChatComposer extends StatelessWidget {
     required this.hintText,
     this.sendTooltip,
     this.focusNode,
+    this.onTalkStart,
+    this.onTalkStop,
+    this.talking = false,
+    this.micTooltip,
     super.key,
   });
+
+  /// Called when the microphone button is pressed and held (`null` hides the button).
+  final VoidCallback? onTalkStart;
+
+  /// Called when the microphone button is released or the pointer leaves it.
+  final VoidCallback? onTalkStop;
+
+  /// Whether a push-to-talk capture is running right now.
+  final bool talking;
+
+  /// Accessibility label of the microphone button.
+  final String? micTooltip;
 
   /// Text controller owning the draft message.
   final TextEditingController controller;
@@ -65,6 +82,16 @@ class ChatComposer extends StatelessWidget {
                 onSubmitted: (_) => onSend?.call(),
               ),
             ),
+            if (onTalkStart != null) ...<Widget>[
+              const SizedBox(width: 8),
+              _MicButton(
+                enabled: enabled,
+                listening: talking,
+                onStart: onTalkStart!,
+                onStop: onTalkStop,
+                tooltip: micTooltip ?? hintText,
+              ),
+            ],
             const SizedBox(width: 8),
             _SendButton(
               enabled: enabled && onSend != null,
@@ -112,6 +139,63 @@ class _SendButton extends StatelessWidget {
             Icons.send_rounded,
             size: 20,
             color: enabled ? colors.background : colors.muted,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Press-and-hold microphone button: starts capture on pointer down, sends on release.
+///
+/// Raw pointer events are used instead of a long-press gesture so the first syllable is
+/// never clipped. The button is a full 48 dp touch target and carries a semantic label.
+class _MicButton extends StatelessWidget {
+  const _MicButton({
+    required this.enabled,
+    required this.listening,
+    required this.onStart,
+    required this.onStop,
+    required this.tooltip,
+  });
+
+  final bool enabled;
+  final bool listening;
+  final VoidCallback onStart;
+  final VoidCallback? onStop;
+  final String tooltip;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = ArmxColors.of(context);
+    final tone = !enabled
+        ? colors.muted
+        : listening
+            ? colors.green
+            : colors.cyan;
+    return Semantics(
+      button: true,
+      enabled: enabled,
+      label: tooltip,
+      child: Tooltip(
+        message: tooltip,
+        child: Listener(
+          onPointerDown: enabled ? (_) => onStart() : null,
+          onPointerUp: enabled ? (_) => onStop?.call() : null,
+          onPointerCancel: enabled ? (_) => onStop?.call() : null,
+          child: Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              color: colors.panel2,
+              borderRadius: BorderRadius.circular(ArmxTheme.panelRadius),
+              border: Border.all(color: listening ? tone : colors.border),
+            ),
+            child: Icon(
+              listening ? Icons.mic_rounded : Icons.mic_none_rounded,
+              size: 22,
+              color: tone,
+            ),
           ),
         ),
       ),

@@ -58,6 +58,9 @@ abstract final class AppRoutes {
   /// typed-input fallback can be exercised without a tray icon).
   static const String desktopPopup = '/desktop-popup';
 
+  /// Voice pipeline: push-to-talk, wake word, spoken replies and engine honesty.
+  static const String voice = '/settings/voice';
+
   /// Admin/Owner voice-announcement screen ("Talk").
   static const String intercomTalk = '/settings/talk';
 

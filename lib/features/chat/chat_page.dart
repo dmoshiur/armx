@@ -4,9 +4,11 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../core/errors/app_exception.dart';
 import '../../core/l10n/l10n.dart';
+import '../../core/router/routes.dart';
 import '../../core/theme/armx_colors.dart';
 import '../../core/theme/motion.dart';
 import '../../core/widgets/ambient_background.dart';
@@ -16,6 +18,8 @@ import '../../core/widgets/glass_panel.dart';
 import '../../core/widgets/state_views.dart';
 import '../../core/widgets/status_pill.dart';
 import '../../data/models/chat.dart';
+import '../voice/voice_controller.dart';
+import '../voice/voice_state.dart';
 import 'chat_controller.dart';
 import 'chat_state.dart';
 import 'widgets/chat_bubble.dart';
@@ -71,6 +75,15 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     unawaited(ref.read(chatControllerProvider.notifier).send(text));
   }
 
+  /// Starts a push-to-talk capture, or opens the voice screen when the microphone is off.
+  void _startTalking(VoiceState voice) {
+    if (!voice.microphoneEnabled) {
+      context.push(AppRoutes.voice);
+      return;
+    }
+    unawaited(ref.read(voiceControllerProvider.notifier).startPushToTalk());
+  }
+
   void _scrollToBottom() {
     if (!_scrollController.hasClients) {
       return;
@@ -87,6 +100,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final state = ref.watch(chatControllerProvider);
+    final voice = ref.watch(voiceControllerProvider);
     ref.listen<ChatState>(chatControllerProvider, (previous, next) {
       final grew = previous == null ||
           next.messages.length != previous.messages.length ||
@@ -143,6 +157,18 @@ class _ChatPageState extends ConsumerState<ChatPage> {
               onSend: _canSend ? _submit : null,
               hintText: l10n.chatComposerHint,
               sendTooltip: l10n.chatSend,
+              talking: voice.isCapturing && voice.mode == VoiceInputMode.pushToTalk,
+              micTooltip: voice.microphoneEnabled
+                  ? l10n.voiceChatMicTooltip
+                  : l10n.voiceMicrophoneTitle,
+              onTalkStart: () => _startTalking(voice),
+              onTalkStop: () {
+                if (voice.mode == VoiceInputMode.pushToTalk) {
+                  unawaited(ref
+                      .read(voiceControllerProvider.notifier)
+                      .stopPushToTalk(sendToAssistant: true));
+                }
+              },
             ),
           ],
         ),

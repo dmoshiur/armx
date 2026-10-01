@@ -8,7 +8,6 @@ import 'package:flutter/widgets.dart' show Locale, PlatformDispatcher;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/config/app_config.dart';
-import '../../core/platform/desktop_shell.dart';
 import '../../core/platform/single_instance.dart';
 import '../../core/providers.dart';
 import '../../core/utils/clock.dart';

@@ -22,6 +22,7 @@ import '../../features/desktop/desktop_controller.dart';
 import '../../features/intercom/intercom_controller.dart';
 import '../auth/lock/app_lock_controller.dart';
 import '../auth/session/auth_controller.dart';
+import '../voice/voice_controller.dart';
 
 /// Settings: language, theme, voice, privacy and the security switches.
 ///
@@ -127,20 +128,32 @@ class SettingsPage extends ConsumerWidget {
                   ),
                 SectionHeader(
                   title: l10n.settingsVoiceSection,
-                  subtitle: l10n.orbStateListening,
-                  trailing: stepBadge(context, 4),
+                  subtitle: l10n.voiceSubtitle,
                 ),
                 ArmxTile(
-                  title: l10n.navChat,
-                  subtitle: '${AppInfo.wakeWord} · ${prefs.wakeWordEnabled ? 'on' : 'off'}',
+                  title: l10n.voiceOpenTitle,
+                  subtitle: l10n.voiceOpenSubtitle,
+                  leading: const Icon(Icons.graphic_eq_rounded),
+                  accent: colors.cyan,
+                  onTap: () => context.push(AppRoutes.voice),
+                ),
+                ArmxTile(
+                  title: l10n.voiceWakeWordTitle,
+                  subtitle:
+                      '${AppInfo.wakeWord} · ${prefs.wakeWordEnabled ? l10n.desktopAutostartOn : l10n.desktopAutostartOff}',
                   leading: const Icon(Icons.record_voice_over_outlined),
+                  // Routed through the voice controller (never straight to preferences):
+                  // arming must start the platform's visible background listener, and
+                  // disarming must stop it.
                   trailing: Switch(
                     value: prefs.wakeWordEnabled,
-                    onChanged: repository.setWakeWordEnabled,
+                    onChanged: (value) => ref
+                        .read(voiceControllerProvider.notifier)
+                        .setWakeWordEnabled(value),
                   ),
                 ),
                 ArmxTile(
-                  title: 'Wake word sensitivity',
+                  title: l10n.voiceWakeWordSensitivityTitle,
                   subtitle: prefs.wakeWordSensitivity.toStringAsFixed(2),
                   leading: const Icon(Icons.hearing_outlined),
                   trailing: SizedBox(
@@ -157,11 +170,12 @@ class SettingsPage extends ConsumerWidget {
                 ),
                 const AssistantListeningStatusPanel(),
                 ArmxTile(
-                  title: 'Speak replies automatically',
+                  title: l10n.voiceAutoSpeakTitle,
+                  subtitle: l10n.voiceAutoSpeakSubtitle,
                   leading: const Icon(Icons.volume_up_outlined),
                   trailing: Switch(
                     value: prefs.ttsAutoSpeak,
-                    onChanged: repository.setTtsAutoSpeak,
+                    onChanged: ref.read(voiceControllerProvider.notifier).setAutoSpeak,
                   ),
                 ),
                 SectionHeader(

@@ -13,7 +13,6 @@ import '../../core/widgets/armx_tile.dart';
 import '../../core/widgets/layout_blocks.dart';
 import '../../core/widgets/glass_panel.dart';
 import 'intercom_controller.dart';
-import 'intercom_state.dart';
 
 /// The one-time opt-in screen for voice announcements (Alexa Drop-In model).
 ///

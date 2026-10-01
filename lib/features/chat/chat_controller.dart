@@ -10,8 +10,6 @@ import '../../core/providers.dart';
 import '../../core/security/risk_policy.dart';
 import '../../core/security/security_constants.dart';
 import '../../core/security/verification_evidence.dart';
-import '../../core/security/verification_gateway.dart';
-import '../../data/api/armx_api.dart';
 import '../../data/api/ws_events.dart';
 import '../../data/models/chat.dart';
 import '../../data/models/unlock.dart';
