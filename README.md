@@ -23,6 +23,8 @@ privately hosted home/estate assistant.
 | 1 | Setup, theme, router, l10n, skeleton, mock backend | ✅ delivered |
 | 2 | Auth, pairing, app lock | ✅ delivered |
 | 3 | Chat + WebSocket + tool approval cards | ✅ delivered |
+| 3+ | **Desktop background + hotkey mode** (tray, global hotkey, autostart, popup) | ✅ delivered |
+| 3+ | **Walkie-talkie voice intercom** (Admin announcements, opt-in, mutual log) | ✅ delivered |
 | 4 | Voice (push-to-talk, wake word, TTS) | |
 | 5 | Dashboard + devices | |
 | 6 | Admin, kill-switch, audit | |
@@ -41,6 +43,34 @@ tab: a streaming transcript over the WebSocket event contract, tool approval car
 enforce the risk tiers (LOW runs immediately, MEDIUM/HIGH require an explicit decision
 after on-device verification), reconnect with exponential backoff, and an offline transcript
 cache. See [`docs/step-3-report.md`](docs/step-3-report.md).
+
+The desktop background mode and the walkie-talkie intercom are reported in
+[`docs/step-4-report.md`](docs/step-4-report.md).
+
+### Desktop background mode + walkie-talkie intercom
+
+Two add-ons sit on top of the step-3 conversation layer:
+
+* **Desktop background + hotkey mode** (Windows / macOS / Linux): auto-start at login
+  (**default ON**) behind a *visible* tray icon with `Open A.R.M.X`, `Talk now`,
+  `Pause listening`, `Background readiness`, `KILL-SWITCH`, `Settings` and `Quit`; a
+  rebindable global hotkey (`Ctrl+Alt+Space` / `⌘+Shift+Space` / `Ctrl+Alt+A`) that opens a
+  frameless always-on-top popup and starts push-to-talk listening even while the wake word is
+  paused; audio/video device probing with an honest typed-input fallback when no microphone
+  exists; single-instance enforcement; and a background-readiness checklist with a fix link
+  per row. See [`docs/desktop-mode.md`](docs/desktop-mode.md) — it includes the manual test
+  matrix for Windows 10/11, macOS Intel + Apple Silicon and Ubuntu GNOME/KDE, and states the
+  platform parity gaps (Linux `keybinder-3.0`, `record`'s missing permission API on
+  Windows/Linux, no Linux camera enumeration, OS do-not-disturb not yet detected) instead of
+  pretending they are solved.
+
+* **Walkie-talkie voice intercom**: the Admin/Owner can speak to one opted-in device or
+  broadcast to all of them, over the existing WebSocket. Three rules are enforced in code and
+  covered by tests: consent is a one-time, device-local, default-OFF opt-in; every playback is
+  audible **and** visible (chime, name, live waveform, `Mute this once` /
+  `Turn off announcements`); and whatever the Admin sees about a user, that user sees in
+  **My Activity** from the same audit table. See
+  [`docs/walkie-talkie.md`](docs/walkie-talkie.md).
 
 ### Background assistant add-on
 

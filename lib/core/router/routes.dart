@@ -51,6 +51,19 @@ abstract final class AppRoutes {
   /// Design-system gallery (tokens, orb states, chips, panels).
   static const String designSystem = '/settings/design-system';
 
+  /// Background readiness checklist (desktop background mode).
+  static const String desktopReadiness = '/settings/desktop-readiness';
+
+  /// The desktop popup card (normally hosted by the native shell; routed here so the
+  /// typed-input fallback can be exercised without a tray icon).
+  static const String desktopPopup = '/desktop-popup';
+
+  /// Admin/Owner voice-announcement screen ("Talk").
+  static const String intercomTalk = '/settings/talk';
+
+  /// The device's own announcement log (what the Admin sees about this device).
+  static const String intercomActivity = '/settings/intercom-activity';
+
   /// Route name for a not-yet-implemented screen, parameterised by delivery step.
   static String placeholderName(int step) => 'placeholder_step_$step';
 }

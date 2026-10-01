@@ -168,3 +168,47 @@ class OutboxEntries extends Table {
   /// Last failure message, shown on the failed-action banner.
   TextColumn get lastError => text().nullable()();
 }
+
+/// Offline cache of voice announcements (the mutual activity log).
+///
+/// The same rows back the Admin's per-user view and the user's own "My Activity" view, so
+/// the two screens can never disagree: one table, two readers.
+@TableIndex(name: 'announcements_at', columns: {#at})
+@TableIndex(name: 'announcements_target', columns: {#targetUserId, #at})
+class AnnouncementsCache extends Table {
+  /// Announcement id (server generated).
+  TextColumn get id => text()();
+
+  /// Who sent it.
+  TextColumn get fromUserId => text()();
+
+  /// Display name of the sender (denormalised for the log rows).
+  TextColumn get fromName => text()();
+
+  /// `USER` or `BROADCAST`.
+  TextColumn get scope => text()();
+
+  /// Target device id, empty for a broadcast.
+  TextColumn get targetUserId => text()();
+
+  /// Human readable target (device name or "all opted-in devices").
+  TextColumn get targetLabel => text()();
+
+  /// Where the audio is cached locally (empty until downloaded).
+  TextColumn get audioPath => text()();
+
+  /// Length of the recording in milliseconds.
+  IntColumn get durationMs => integer()();
+
+  /// Status wire value (`QUEUED`/`DELIVERED`/`PLAYED`/`MISSED`/`REVOKED`).
+  TextColumn get status => text()();
+
+  /// Event time (UTC).
+  DateTimeColumn get at => dateTime()();
+
+  /// When playback finished, if it did (UTC).
+  DateTimeColumn get playedAt => dateTime().nullable()();
+
+  @override
+  Set<Column<Object>> get primaryKey => <Column<Object>>{id};
+}

@@ -27,6 +27,22 @@ graph. Bumping a pin is a reviewed change.
 | `flutter_markdown` | `core/widgets/sanitized_markdown.dart` | Assistant output is untrusted text. The third-party renderer would interpret links/images/HTML for us. We render a deliberate subset (headings, bold, italic, inline code, bullets, quotes, fenced code) and turn links into visible, inert text. |
 | `wake word: picovoice_porcupine / openWakeWord` | in-app `WakeWordEngine` interface with a stub default | The porcupine plugin needs a licensed AccessKey (a secret) and the openWakeWord bindings are not published on pub.dev. Step 4 ships the interface plus the stub; wiring a real engine means adding one plugin and one class — see `docs/run.md`. |
 
+## Desktop background mode + walkie-talkie pins
+
+| Package | Pin | Why this version / caveat |
+| --- | --- | --- |
+| `tray_manager` | `0.5.3` | Latest published on the classic `package:tray_manager/tray_manager.dart` API. **`0.7.0` exists only on GitHub** (nativeapi rewrite, Flutter 3.47/Dart 3.13 + nativeapi ^0.3.0) and it stops reporting tray clicks on Linux, so the migration is deliberately deferred. |
+| `hotkey_manager` | `0.2.3` | System-wide hotkeys on all three desktops. Linux needs `keybinder-3.0`; `keyUp` handlers are macOS-only. |
+| `window_manager` | `0.5.2` | Frameless, always-on-top popup, `setPreventClose(true)` for minimize-to-tray. |
+| `launch_at_startup` | `0.5.1` | Windows Run key/Startup shortcut, macOS `SMAppService`, Linux XDG `~/.config/autostart`. macOS needs the extra MethodChannel + LaunchAtLogin SPM wiring documented in `docs/desktop-mode.md`. |
+| `record` | `7.1.1` | Push-to-talk capture for the intercom. **No permission API on Windows/Linux** (parity gap, documented); Linux needs `parecord`/`pactl`/`ffmpeg`; macOS needs `NSMicrophoneUsageDescription` + the audio-input entitlement. |
+| `audioplayers` | `6.6.0` | Chime + announcement playback from an asset and from a cached file. |
+
+No `path_provider` pin was added: the announcement clip is a disposable cache entry, so it is
+written under `Directory.systemTemp` instead of pulling a dependency whose exact version could
+not be resolved offline. No `package_info_plus` either — `launchAtStartup.setup()` uses the
+constants in `core/config/app_info.dart`.
+
 ## Version highlights worth remembering
 
 * `riverpod_generator 4.0.9` pairs with `riverpod_annotation 4.0.7`; generated providers are

@@ -29,12 +29,19 @@ class ArmxDatabase extends _$ArmxDatabase {
   ArmxDatabase.open() : super(driftDatabase(name: 'armx_ai'));
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
         onCreate: (Migrator m) async {
           await m.createAll();
+        },
+        onUpgrade: (Migrator m, int from, int to) async {
+          if (from < 2) {
+            // Step 4 (intercom) added the announcements cache. Creating just that table
+            // keeps every existing install's transcript, prefs and audit rows intact.
+            await m.createTable(announcementsCache);
+          }
         },
         beforeOpen: (OpeningDetails details) async {
           await customStatement('PRAGMA foreign_keys = ON');
@@ -161,6 +168,41 @@ class ArmxDatabase extends _$ArmxDatabase {
     );
   }
 
+  // ---- Announcements cache -------------------------------------------------
+
+  /// Announcements for [targetUserId] (or every row when it is empty), newest first.
+  Future<List<AnnouncementsCacheData>> announcements({
+    String targetUserId = '',
+    int limit = 200,
+  }) {
+    final query = select(announcementsCache)
+      ..where(
+        (t) => targetUserId.isEmpty ? const Constant(true) : t.targetUserId.equals(targetUserId),
+      )
+      ..orderBy(<OrderClauseGenerator<$AnnouncementsCacheTable>>[
+        ($AnnouncementsCacheTable t) => OrderingTerm.desc(t.at),
+      ])
+      ..limit(limit);
+    return query.get();
+  }
+
+  /// Inserts or updates one announcement row.
+  Future<void> upsertAnnouncement(AnnouncementsCacheCompanion entry) =>
+      into(announcementsCache).insertOnConflictUpdate(entry);
+
+  /// Marks an announcement as played at [playedAt].
+  Future<void> markAnnouncementPlayed(String id, DateTime playedAt) async {
+    await (update(announcementsCache)..where((t) => t.id.equals(id))).write(
+      AnnouncementsCacheCompanion(
+        status: const Value<String>('PLAYED'),
+        playedAt: Value<DateTime>(playedAt),
+      ),
+    );
+  }
+
+  /// Deletes every cached announcement.
+  Future<int> clearAnnouncements() => delete(announcementsCache).go();
+
   // ---- Wipe ----------------------------------------------------------------
 
   /// Erases every cached row. Used by the "delete local data" privacy action.
@@ -171,6 +213,7 @@ class ArmxDatabase extends _$ArmxDatabase {
       await delete(deviceCache).go();
       await delete(ruleCache).go();
       await delete(outboxEntries).go();
+      await clearAnnouncements();
     });
   }
 

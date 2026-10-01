@@ -13,6 +13,10 @@ import '../../features/auth/session/auth_controller.dart';
 import '../../features/bootstrap/bootstrap_gate.dart';
 import '../../features/chat/chat_page.dart';
 import '../../features/common/placeholder_page.dart';
+import '../../features/desktop/popup/desktop_popup_page.dart';
+import '../../features/desktop/widgets/background_readiness_page.dart';
+import '../../features/intercom/admin_talk_page.dart';
+import '../../features/intercom/intercom_activity_page.dart';
 import '../../features/dev/design_system_page.dart';
 import '../../features/settings/about_page.dart';
 import '../../features/settings/diagnostics_page.dart';
@@ -177,6 +181,11 @@ GoRouter appRouter(Ref ref) {
         ],
       ),
       GoRoute(
+        path: AppRoutes.desktopPopup,
+        name: 'desktopPopup',
+        builder: (context, state) => const DesktopPopupPage(),
+      ),
+      GoRoute(
         path: AppRoutes.vision,
         name: 'vision',
         builder: (context, state) => const PlaceholderPage(
@@ -213,6 +222,21 @@ GoRouter appRouter(Ref ref) {
             path: 'design-system',
             name: 'designSystem',
             builder: (context, state) => const DesignSystemPage(),
+          ),
+          GoRoute(
+            path: 'desktop-readiness',
+            name: 'desktopReadiness',
+            builder: (context, state) => const BackgroundReadinessPage(),
+          ),
+          GoRoute(
+            path: 'talk',
+            name: 'intercomTalk',
+            builder: (context, state) => const AdminTalkPage(),
+          ),
+          GoRoute(
+            path: 'intercom-activity',
+            name: 'intercomActivity',
+            builder: (context, state) => const IntercomActivityPage(),
           ),
         ],
       ),

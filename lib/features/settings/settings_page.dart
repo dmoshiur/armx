@@ -1,5 +1,7 @@
 // Copyright (c) 2026 Md. Moshiur Rahman Mohi / THAMJJ13.TOP. Proprietary. All Rights Reserved.
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -16,6 +18,8 @@ import '../../core/widgets/state_views.dart';
 import '../../core/widgets/status_pill.dart';
 import '../../data/models/preferences.dart';
 import '../../features/assistant_mode/assistant_listening_status_panel.dart';
+import '../../features/desktop/desktop_controller.dart';
+import '../../features/intercom/intercom_controller.dart';
 import '../auth/lock/app_lock_controller.dart';
 import '../auth/session/auth_controller.dart';
 
@@ -34,6 +38,18 @@ class SettingsPage extends ConsumerWidget {
         compact: true,
         icon: Icons.schedule_rounded,
       );
+
+  /// Desktop background mode only exists on Windows/macOS/Linux.
+  static Widget _desktopOnly(BuildContext context) {
+    final desktop = AppInfo.isDesktop;
+    return desktop
+        ? const SizedBox.shrink()
+        : StatusPill(
+            label: context.l10n.desktopOnly,
+            tone: SeverityTone.neutral,
+            compact: true,
+          );
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -147,6 +163,86 @@ class SettingsPage extends ConsumerWidget {
                     value: prefs.ttsAutoSpeak,
                     onChanged: repository.setTtsAutoSpeak,
                   ),
+                ),
+                SectionHeader(
+                  title: l10n.desktopBackgroundSection,
+                  subtitle: l10n.desktopBackgroundSubtitle,
+                  trailing: _desktopOnly(context),
+                ),
+                ArmxTile(
+                  title: l10n.desktopAutostartTitle,
+                  subtitle: l10n.desktopAutostartSubtitle,
+                  leading: const Icon(Icons.login_rounded),
+                  trailing: Switch(
+                    value: prefs.autostartEnabled,
+                    onChanged: (bool enabled) => unawaited(
+                      ref.read(desktopControllerProvider.notifier).setLaunchAtLogin(enabled),
+                    ),
+                  ),
+                ),
+                ArmxTile(
+                  title: l10n.desktopHotkeyTitle,
+                  subtitle: prefs.desktopHotkey,
+                  leading: const Icon(Icons.keyboard_command_key_rounded),
+                  trailing: const Icon(Icons.chevron_right_rounded),
+                  onTap: () => context.push(AppRoutes.desktopReadiness),
+                ),
+                ArmxTile(
+                  title: l10n.desktopReadinessTitle,
+                  subtitle: l10n.desktopReadinessFootnote,
+                  leading: const Icon(Icons.fact_check_outlined),
+                  trailing: const Icon(Icons.chevron_right_rounded),
+                  onTap: () => context.push(AppRoutes.desktopReadiness),
+                ),
+                SectionHeader(
+                  title: l10n.intercomEnabledTitle,
+                  subtitle: l10n.intercomEnabledSubtitle,
+                ),
+                ArmxTile(
+                  title: l10n.intercomConsentTitle,
+                  subtitle: prefs.intercomConsent
+                      ? l10n.desktopAutostartOn
+                      : l10n.desktopAutostartOff,
+                  leading: const Icon(Icons.record_voice_over_outlined),
+                  trailing: Switch(
+                    value: prefs.intercomConsent,
+                    onChanged: (bool enabled) => unawaited(
+                      ref.read(intercomControllerProvider.notifier).setConsent(
+                            enabled: enabled,
+                            allowWhileLocked: prefs.intercomConsentLocked,
+                          ),
+                    ),
+                  ),
+                ),
+                ArmxTile(
+                  title: l10n.intercomConsentLockedTitle,
+                  subtitle: l10n.intercomConsentLockedBody,
+                  leading: const Icon(Icons.lock_outline_rounded),
+                  trailing: Switch(
+                    value: prefs.intercomConsentLocked,
+                    onChanged: prefs.intercomConsent
+                        ? (bool enabled) => unawaited(
+                              ref.read(intercomControllerProvider.notifier).setConsent(
+                                    enabled: true,
+                                    allowWhileLocked: enabled,
+                                  ),
+                            )
+                        : null,
+                  ),
+                ),
+                ArmxTile(
+                  title: l10n.intercomTalkTitle,
+                  subtitle: l10n.intercomRecipientsSubtitle,
+                  leading: const Icon(Icons.campaign_outlined),
+                  trailing: const Icon(Icons.chevron_right_rounded),
+                  onTap: () => context.push(AppRoutes.intercomTalk),
+                ),
+                ArmxTile(
+                  title: l10n.intercomMyActivityTitle,
+                  subtitle: l10n.intercomMyActivitySubtitle,
+                  leading: const Icon(Icons.history_rounded),
+                  trailing: const Icon(Icons.chevron_right_rounded),
+                  onTap: () => context.push(AppRoutes.intercomActivity),
                 ),
                 SectionHeader(
                   title: l10n.settingsVisionSection,
