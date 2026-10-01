@@ -105,6 +105,7 @@ class VoiceController extends Notifier<VoiceState> {
       engines: VoiceEngineReport(
         sttEngineId: stt.engineId,
         sttAvailable: stt.isAvailable,
+        sttSimulated: stt.isSimulated,
         ttsEngineId: tts.engineId,
         ttsAvailable: tts.isAvailable,
         ttsSimulated: tts.isSimulated,

@@ -439,5 +439,6 @@
   "voiceErrorBackgroundUnsupported": "এই প্ল্যাটফর্মে ব্যাকগ্রাউন্ডে শোনা উপলব্ধ নয়।",
   "voiceErrorWakeWordEngine": "ওয়েক-ওয়ার্ড ইঞ্জিন একটি ত্রুটি জানিয়েছে।",
   "voiceErrorGeneric": "ভয়েস ধারণ ব্যর্থ হয়েছে। আবার চেষ্টা করুন।",
-  "voiceWakeWordSensitivityTitle": "ওয়েক ওয়ার্ড সংবেদনশীলতা"
+  "voiceWakeWordSensitivityTitle": "ওয়েক ওয়ার্ড সংবেদনশীলতা",
+  "voiceEngineSimulatedNote": "এই বিল্ডে অনুকরণ করা হয়; মাইক্রোফোনের কোনো অডিও ধারণ হয় না।"
 }

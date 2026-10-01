@@ -54,6 +54,7 @@ class VoiceEngineReport {
   const VoiceEngineReport({
     this.sttEngineId = 'none',
     this.sttAvailable = false,
+    this.sttSimulated = false,
     this.ttsEngineId = 'none',
     this.ttsAvailable = false,
     this.ttsSimulated = false,
@@ -66,6 +67,9 @@ class VoiceEngineReport {
 
   /// Whether a real speech-to-text engine is present.
   final bool sttAvailable;
+
+  /// Whether recognition is simulated (no microphone audio is captured).
+  final bool sttSimulated;
 
   /// Identifier of the text-to-speech engine (diagnostics only).
   final String ttsEngineId;
@@ -93,6 +97,7 @@ class VoiceEngineReport {
   VoiceEngineReport copyWith({
     String? sttEngineId,
     bool? sttAvailable,
+    bool? sttSimulated,
     String? ttsEngineId,
     bool? ttsAvailable,
     bool? ttsSimulated,
@@ -102,6 +107,7 @@ class VoiceEngineReport {
       VoiceEngineReport(
         sttEngineId: sttEngineId ?? this.sttEngineId,
         sttAvailable: sttAvailable ?? this.sttAvailable,
+        sttSimulated: sttSimulated ?? this.sttSimulated,
         ttsEngineId: ttsEngineId ?? this.ttsEngineId,
         ttsAvailable: ttsAvailable ?? this.ttsAvailable,
         ttsSimulated: ttsSimulated ?? this.ttsSimulated,
@@ -114,6 +120,7 @@ class VoiceEngineReport {
       other is VoiceEngineReport &&
       other.sttEngineId == sttEngineId &&
       other.sttAvailable == sttAvailable &&
+      other.sttSimulated == sttSimulated &&
       other.ttsEngineId == ttsEngineId &&
       other.ttsAvailable == ttsAvailable &&
       other.ttsSimulated == ttsSimulated &&
@@ -124,6 +131,7 @@ class VoiceEngineReport {
   int get hashCode => Object.hash(
         sttEngineId,
         sttAvailable,
+        sttSimulated,
         ttsEngineId,
         ttsAvailable,
         ttsSimulated,

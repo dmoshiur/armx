@@ -60,7 +60,8 @@ void main() {
     expect(find.text(l10n.voiceEngineStt), findsOneWidget);
     expect(find.text(l10n.voiceEngineTts), findsOneWidget);
     expect(find.text(l10n.voiceEngineWakeWord), findsOneWidget);
-    // The simulated STT/TTS pair reports "simulated"; the wake-word stub reports unavailable.
+    // The simulated STT/TTS pair reports "simulated"; the wake-word stub reports
+    // "unavailable" because it captures no audio at all.
     expect(find.text(l10n.voiceEngineSimulated), findsNWidgets(2));
     expect(find.text(l10n.voiceEngineUnavailable), findsOneWidget);
   });

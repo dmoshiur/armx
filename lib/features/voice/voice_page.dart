@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/l10n/l10n.dart';
+import '../../core/providers.dart';
 import '../../core/theme/armx_colors.dart';
 import '../../core/widgets/ambient_background.dart';
 import '../../core/widgets/armx_controls.dart';
@@ -12,7 +13,6 @@ import '../../core/widgets/armx_tile.dart';
 import '../../core/widgets/glass_panel.dart';
 import '../../core/widgets/layout_blocks.dart';
 import '../../core/widgets/state_views.dart';
-import '../../core/widgets/status_pill.dart';
 import 'voice_controller.dart';
 import 'voice_state.dart';
 import 'widgets/voice_widgets.dart';
@@ -188,8 +188,10 @@ class _VoicePageState extends ConsumerState<VoicePage> {
                       label: l10n.voiceEngineStt,
                       engineId: state.engines.sttEngineId,
                       available: state.engines.sttAvailable,
-                      simulated: false,
-                      note: l10n.voiceEngineSttNote,
+                      simulated: state.engines.sttSimulated,
+                      note: state.engines.sttSimulated
+                          ? l10n.voiceEngineSimulatedNote
+                          : l10n.voiceEngineSttNote,
                     ),
                     VoiceEngineRow(
                       label: l10n.voiceEngineTts,

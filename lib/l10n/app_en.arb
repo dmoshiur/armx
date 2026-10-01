@@ -520,5 +520,6 @@
   "voiceErrorBackgroundUnsupported": "Background listening is not available on this platform.",
   "voiceErrorWakeWordEngine": "The wake-word engine reported an error.",
   "voiceErrorGeneric": "Voice capture failed. Please try again.",
-  "voiceWakeWordSensitivityTitle": "Wake word sensitivity"
+  "voiceWakeWordSensitivityTitle": "Wake word sensitivity",
+  "voiceEngineSimulatedNote": "Simulated in this build; no microphone audio is captured."
 }
