@@ -7,6 +7,7 @@ import '../../core/l10n/l10n.dart';
 import '../../core/router/routes.dart';
 import '../../core/theme/armx_colors.dart';
 import '../../core/theme/armx_theme.dart';
+import '../intercom/announcement_overlay.dart';
 
 /// One entry of the primary navigation.
 class ShellDestination {
@@ -89,6 +90,15 @@ class AppShell extends StatelessWidget {
     final isWide = MediaQuery.sizeOf(context).width >= 1024;
     final labels = _labels(context);
 
+    // The announcement overlay floats above whichever tab is open, so an Admin voice
+    // announcement is never hidden behind another route.
+    final shell = Stack(
+      children: <Widget>[
+        navigationShell,
+        const AnnouncementOverlayHost(),
+      ],
+    );
+
     if (isWide) {
       return Scaffold(
         body: Row(
@@ -115,14 +125,14 @@ class AppShell extends StatelessWidget {
                   ),
               ],
             ),
-            Expanded(child: navigationShell),
+            Expanded(child: shell),
           ],
         ),
       );
     }
 
     return Scaffold(
-      body: navigationShell,
+      body: shell,
       bottomNavigationBar: DecoratedBox(
         decoration: BoxDecoration(
           border: Border(top: BorderSide(color: colors.border)),

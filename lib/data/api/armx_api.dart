@@ -2,6 +2,7 @@
 
 import '../../core/security/risk_tier.dart';
 import '../models/admin.dart';
+import '../models/announcement.dart';
 import '../models/audit_entry.dart';
 import '../models/auth.dart';
 import '../models/device.dart';
@@ -24,6 +25,11 @@ import 'ws_events.dart';
 /// `POST /devices/pair`, `POST /devices/unpair`, `GET /devices`,
 /// `POST /devices/{id}/command`, `GET /audit`, `POST /admin/kill`, `POST /admin/tools`,
 /// `POST /unlock/request`, `GET|POST /rules`, plus `GET /ws` for events.
+///
+/// Intercom endpoints (see `docs/api.md` § Intercom): `GET /v1/intercom/recipients`,
+/// `GET|POST /v1/intercom/consent`, `POST /v1/intercom/announcements`,
+/// `GET /v1/intercom/announcements`, `GET /v1/intercom/announcements/{id}/audio`,
+/// `POST /v1/intercom/announcements/{id}/outcome`.
 abstract interface class ArmxApi {
   // ---- Authentication & pairing -------------------------------------------
 
@@ -157,6 +163,49 @@ abstract interface class ArmxApi {
     required String toolCallId,
     required bool approve,
     OwnerVerifiedToken? assertion,
+  });
+
+  // ---- Admin/Owner intercom (voice announcements) --------------------------
+
+  /// Devices the Admin may target, each carrying its own consent state.
+  ///
+  /// A device that has not opted in is returned with `consented: false` and the Admin UI
+  /// hides it: the caller must not be able to even attempt a send to a non-consented
+  /// device.
+  Future<List<IntercomRecipient>> intercomRecipients();
+
+  /// This device's consent state (rule 1: OFF until the owner turns it on).
+  Future<IntercomConsent> intercomConsent();
+
+  /// Sets this device's consent state. Local-only by design — the server records it so
+  /// the Admin's recipient list stays accurate, but no remote party can flip it.
+  Future<IntercomConsent> setIntercomConsent({
+    required bool enabled,
+    required bool allowWhileLocked,
+  });
+
+  /// Uploads one recorded announcement.
+  ///
+  /// [audioBytes] is the recording, [targetUserId] is empty for a broadcast. Returns the
+  /// stored announcement so the Admin log can show it immediately.
+  Future<Announcement> sendAnnouncement({
+    required List<int> audioBytes,
+    required int durationMs,
+    String targetUserId = '',
+    String mimeType = 'audio/mp4',
+  });
+
+  /// The announcement log (Admin view: every device; user view: own rows).
+  Future<List<Announcement>> announcements({String targetUserId = ''});
+
+  /// Downloads the recorded audio for [announcementId].
+  Future<List<int>> announcementAudio(String announcementId);
+
+  /// Reports that this device played (or missed) an announcement, so the Admin's log and
+  /// the user's own log stay identical.
+  Future<void> reportAnnouncementOutcome({
+    required String announcementId,
+    required AnnouncementStatus status,
   });
 
   /// Releases sockets/timers. Called when the session ends or the app shuts down.

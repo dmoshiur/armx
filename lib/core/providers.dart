@@ -1,18 +1,29 @@
 // Copyright (c) 2026 Md. Moshiur Rahman Mohi / THAMJJ13.TOP. Proprietary. All Rights Reserved.
 
+import 'package:flutter/foundation.dart';
 import 'package:logger/logger.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
+import '../core/platform/desktop_shell.dart';
+import '../core/platform/desktop_shell_native.dart';
 import '../data/api/armx_api.dart';
 import '../data/api/mock/mock_api.dart';
 import '../data/db/armx_database.dart';
 import '../data/models/preferences.dart';
+import '../data/repositories/announcement_repository.dart';
+import '../data/repositories/chat_repository.dart';
 import '../data/repositories/preferences_repository.dart';
 import 'config/app_config.dart';
 import 'errors/app_exception.dart';
 import 'logging/armx_logger.dart';
 import 'security/secure_store.dart';
 import 'security/secure_screen.dart';
+import 'security/verification_gateway.dart';
+import '../core/services/intercom_audio.dart';
+import '../core/services/intercom_audio_native.dart';
+import '../core/platform/autostart_service.dart';
+import '../core/platform/device_availability.dart';
+import '../core/platform/silence_probe.dart';
 import 'utils/clock.dart';
 
 part 'providers.g.dart';
@@ -57,6 +68,60 @@ ArmxDatabase armxDatabase(Ref ref) => ArmxDatabase.open();
 PreferencesRepository preferencesRepository(Ref ref) =>
     PreferencesRepository(ref.watch(armxDatabaseProvider));
 
+/// Chat transcript persistence (offline cache of the conversation).
+@Riverpod(keepAlive: true)
+ChatRepository chatRepository(Ref ref) => ChatRepository(ref.watch(armxDatabaseProvider));
+
+/// On-device verification gateway (face / voice / system biometric prompts).
+///
+/// Defaults to the deterministic [SimulatedVerificationGateway] until the real
+/// biometric pipelines land (voice = step 4, vision = step 7); tests override it
+/// with a fake to exercise cancellation and failure paths.
+@Riverpod(keepAlive: true)
+VerificationGateway verificationGateway(Ref ref) =>
+    SimulatedVerificationGateway(clock: ref.watch(clockProvider));
+
+/// Local copy of the voice-announcement log (shared by the user and Admin views).
+@Riverpod(keepAlive: true)
+AnnouncementRepository announcementRepository(Ref ref) =>
+    AnnouncementRepository(ref.watch(armxDatabaseProvider));
+
+/// Recorder/player used by the walkie-talkie intercom.
+///
+/// Real implementation on desktop/mobile (`RecordIntercomAudio`), silent stub on the web.
+@Riverpod(keepAlive: true)
+IntercomAudio intercomAudio(Ref ref) =>
+    kIsWeb ? const SilentIntercomAudio() : RecordIntercomAudio();
+
+/// OS "do not disturb" detection.
+///
+/// [AlwaysAudibleProbe] is the current implementation: detecting the platform focus mode is
+/// a per-OS follow-up tracked in `docs/desktop-mode.md`. Until then the feature *assumes
+/// audio is allowed* once the device has consented, which is the conservative choice for
+/// the demo but must not be mistaken for a completed integration.
+@Riverpod(keepAlive: true)
+SilenceProbe silenceProbe(Ref ref) => const AlwaysAudibleProbe();
+
+/// Tray / hotkey / popup window shell.
+///
+/// [NoopDesktopShell] on mobile and the web (where the Android foreground service owns
+/// background mode), the native adapter on Windows, macOS and Linux.
+@Riverpod(keepAlive: true)
+DesktopShell desktopShell(Ref ref) => kIsWeb
+    ? const NoopDesktopShell()
+    : NativeDesktopShell(iconDirectory: 'assets/tray');
+
+/// Launch-at-login integration.
+@Riverpod(keepAlive: true)
+AutostartService autostartService(Ref ref) =>
+    kIsWeb ? const NoopAutostartService() : LaunchAtStartupService();
+
+/// Audio-input / video-device enumeration used by the tooltip and the readiness screen.
+@Riverpod(keepAlive: true)
+DeviceAvailabilityService deviceAvailability(Ref ref) => kIsWeb
+    ? const NoopDeviceAvailabilityService()
+    : RecordDeviceAvailabilityService();
+
 /// Reactive preference snapshot (theme, locale, wake word, thresholds).
 @Riverpod(keepAlive: true)
 Stream<AppPreferences> appPreferences(Ref ref) =>
@@ -64,10 +129,10 @@ Stream<AppPreferences> appPreferences(Ref ref) =>
 
 /// The A.R.M.X backend contract.
 ///
-/// With `--dart-define=USE_MOCK=true` (the default while the backend does not exist) this
-/// returns the deterministic in-app mock. The REST/WebSocket implementation arrives with
-/// step 2 (auth), so a non-mock build fails fast with a clear message instead of silently
-/// pretending to be connected.
+/// With `--dart-define=USE_MOCK=true` (the default while the backend does not
+/// exist) this returns the deterministic in-app mock. The REST/WebSocket
+/// transport is not wired yet, so a non-mock build fails fast with a clear
+/// message instead of silently pretending to be connected.
 @Riverpod(keepAlive: true)
 ArmxApi armxApi(Ref ref) {
   final config = ref.watch(appConfigProvider);

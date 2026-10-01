@@ -1,5 +1,7 @@
 // Copyright (c) 2026 Md. Moshiur Rahman Mohi / THAMJJ13.TOP. Proprietary. All Rights Reserved.
 
+import 'dart:io' show Platform;
+
 import 'package:flutter/foundation.dart';
 
 /// Static product identity, ownership and credit strings.
@@ -32,7 +34,8 @@ abstract final class AppInfo {
 
   /// Copyright header that every source file must carry.
   static const String copyrightHeader =
-      'Copyright (c) 2026 Md. Moshiur Rahman Mohi / THAMJJ13.TOP. Proprietary. All Rights Reserved.';
+      'Copyright (c) 2026 Md. Moshiur Rahman Mohi / THAMJJ13.TOP. '
+      'Proprietary. All Rights Reserved.';
 
   /// Dart package name (also the Android application id suffix).
   static const String packageName = 'armx_ai';
@@ -48,4 +51,11 @@ abstract final class AppInfo {
 
   /// Whether this build is a release build (used for security decisions in the UI).
   static bool get isRelease => kReleaseMode;
+
+  /// Whether the desktop background mode (tray, hotkey, autostart) applies to this build.
+  ///
+  /// Web and mobile builds keep the Android foreground-service path; only Windows, macOS
+  /// and Linux get the tray/hotkey shell.
+  static bool get isDesktop =>
+      !kIsWeb && (Platform.isWindows || Platform.isMacOS || Platform.isLinux);
 }

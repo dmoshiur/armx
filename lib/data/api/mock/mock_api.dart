@@ -12,6 +12,7 @@ import '../../../core/errors/app_exception.dart';
 import '../../../core/security/risk_tier.dart';
 import '../../../core/utils/clock.dart';
 import '../../models/admin.dart';
+import '../../models/announcement.dart';
 import '../../models/audit_entry.dart';
 import '../../models/auth.dart';
 import '../../models/chat.dart';
@@ -33,6 +34,7 @@ import 'mock_unlock_data.dart';
 part 'mock_admin_domain.dart';
 part 'mock_auth_domain.dart';
 part 'mock_chat_domain.dart';
+part 'mock_intercom_domain.dart';
 part 'mock_device_domain.dart';
 part 'mock_rule_domain.dart';
 part 'mock_unlock_domain.dart';
@@ -66,10 +68,14 @@ class MockBackendControl {
     this.pairingOutcome = MockPairingOutcome.approved,
     this.toolCallDelay = const Duration(milliseconds: 900),
     this.tokenInterval = const Duration(milliseconds: 45),
+    this.intercomTargetOnline = true,
   });
 
   /// Simulated round-trip time for every REST call.
   Duration latency;
+
+  /// Whether the targeted intercom device is online (false exercises the MISSED path).
+  bool intercomTargetOnline;
 
   /// When true every call throws [NetworkException] (airplane-mode simulation).
   bool offline;
@@ -100,7 +106,8 @@ class MockArmxApi
         MockAdminDomain,
         MockUnlockDomain,
         MockRuleDomain,
-        MockChatDomain
+        MockChatDomain,
+        MockIntercomDomain
     implements ArmxApi {
   /// Creates the mock backend. Everything it returns derives from [clock] and [random], so
   /// two instances with the same seed behave identically.

@@ -212,6 +212,37 @@ A rule is:
 `{ "rule_id": "…", "would_fire": true, "blocked_reason": "", "steps": ["…"] }` and never
 executes the action.
 
+### Intercom (Admin/Owner voice announcements)
+
+All six endpoints are gated by the `enableAdminIntercom` feature flag on the client and by
+the recipient's own consent on the server.
+
+| Method | Path | Purpose |
+| --- | --- | --- |
+| `GET` | `/v1/intercom/recipients` | Devices the Admin may target. A device that has not opted in is returned with `consented: false` and the client hides it. |
+| `GET` | `/v1/intercom/consent` | This device's consent state (starts `false`). |
+| `POST` | `/v1/intercom/consent` | `{ "enabled": bool, "allow_while_locked": bool }` — the only way consent changes; local to the device. |
+| `POST` | `/v1/intercom/announcements` | Multipart upload: `audio`, `duration_ms`, `target_user_id` (empty = broadcast), `mime_type`. Returns the stored announcement. Refuses a non-consented or offline target (`MISSED`). |
+| `GET` | `/v1/intercom/announcements` | The announcement log (Admin: every device; user: own rows). |
+| `GET` | `/v1/intercom/announcements/{id}/audio` | The recorded audio. |
+| `POST` | `/v1/intercom/announcements/{id}/outcome` | `{ "status": "DELIVERED" \| "PLAYED" \| "MISSED" \| "REVOKED" }` — reported by the device, mirrored to the Admin's log. |
+
+An announcement is:
+
+```json
+{
+  "id": "ann-000001", "from_user_id": "admin-1", "from_name": "Admin",
+  "scope": "USER", "target_user_id": "user-1", "target_label": "Living room tablet",
+  "audio_url": "https://api.armx.test/v1/intercom/announcements/ann-000001/audio",
+  "duration_ms": 400, "status": "DELIVERED",
+  "created_at": "2026-10-01T09:00:00Z", "delivered_at": "2026-10-01T09:00:01Z",
+  "played_at": null
+}
+```
+
+`status` is one of `QUEUED`, `DELIVERED`, `PLAYED`, `MISSED`, `REVOKED`. `MISSED` means the
+target was offline and the announcement was **not** queued for later delivery.
+
 ## WebSocket `GET /ws`
 
 One JSON object per frame. The client ignores unknown `type` values and never throws on a
@@ -226,9 +257,23 @@ malformed frame.
 | `device.state` | `device{id, online, relays[], …}` | merges into the device list |
 | `system.killed` | `engaged`, `reason`, `actor` | forces the red locked state in every screen |
 | `system.heartbeat` | — | keeps the connection alive |
+| `intercom.announcement` | `announcement_id`, `from_name`, `audio_url`, `duration_ms`, `broadcast` | chime + overlay, then playback (only on a consented device) |
+| `intercom.outcome` | `announcement_id`, `target_user_id`, `status` | updates the shared log on both sides |
+| `intercom.consent` | `user_id`, `consented` | refreshes the Admin's recipient list without polling |
 
 Reconnect uses exponential backoff with jitter; the client re-authenticates with the refresh
 token before resubscribing.
+
+> **Step 3 additions (client behaviour):** the chat screen folds the frames above into a
+> transcript. `tool.request` opens an Approve/Deny card whose behaviour is driven by the
+> risk tier: **LOW** calls are approved by the client without a card and the server answers
+> with a plain `tool.result`; **MEDIUM/HIGH** cards require an explicit decision and, before
+> an approval is sent, `RiskPolicy` must be satisfied by fresh (≤ 60 s) face/voice — plus a
+> system biometric for HIGH — evidence captured on-device. For HIGH the client additionally
+> sends the single-use `owner_verified` assertion with `decideToolCall`. A `system.killed`
+> frame blocks the composer, expires every pending card and drops the captured evidence
+> (fail closed); the server closes the socket at the same moment, and the client reconnects
+> with backoff before resubscribing.
 
 ## Errors
 

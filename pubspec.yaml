@@ -65,8 +65,18 @@ dependencies:
   permission_handler: 13.0.2
   geolocator: 14.1.1
 
+  # ---- Desktop background + hotkey mode (Windows / macOS / Linux) ----------
+  tray_manager: 0.5.3 # classic package:tray_manager/tray_manager.dart API (see 0002-dependency-pins.md)
+  hotkey_manager: 0.2.3 # Linux needs `sudo apt-get install keybinder-3.0` (documented caveat)
+  window_manager: 0.5.2 # frameless always-on-top popup + minimize-to-tray
+  launch_at_startup: 0.5.1 # autostart at login; macOS needs the extra MethodChannel wiring
+
   # ---- Activity ------------------------------------------------------------
   flutter_activity_recognition: 4.0.0
+
+  # ---- Voice intercom (record + play the Admin's announcement) --------------
+  record: 7.1.1 # push-to-talk capture; Linux needs parecord/pactl/ffmpeg
+  audioplayers: 6.6.0 # chime + announcement playback
 
   # ---- Misc ----------------------------------------------------------------
   qr_flutter: 4.1.0 # pairing QR for the device public key / fingerprint
@@ -102,6 +112,8 @@ flutter:
   assets:
     - assets/models/ # optional .tflite model dir (see assets/models/README.md)
     - assets/images/
+    - assets/tray/ # desktop tray icons, one per visual state (idle/listening/thinking/muted/killed)
+    - assets/audio/ # intercom chime + announcement placeholder audio
 
   # Fonts are BUNDLED (no runtime font downloads, works offline, no network fonts).
   # Both files are variable fonts (fvar axes: Inter -> opsz,wght; JetBrains Mono -> wght);

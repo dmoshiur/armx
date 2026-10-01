@@ -68,6 +68,21 @@ abstract final class PreferenceKeys {
   /// JSON of the signed-in user profile (non-secret session metadata).
   static const String sessionUser = 'armx.auth.session_user';
 
+  /// Whether the Admin/Owner voice-announcement feature is switched on at all.
+  static const String intercomEnabled = 'armx.intercom.enabled';
+
+  /// Whether this device accepts voice announcements (rule 1: OFF by default).
+  static const String intercomConsent = 'armx.intercom.consent';
+
+  /// Whether announcements may play while the device is locked (rule 1b: OFF by default).
+  static const String intercomConsentLocked = 'armx.intercom.consent_locked';
+
+  /// Whether A.R.M.X starts at login (desktop background mode, ON by default).
+  static const String autostartEnabled = 'armx.desktop.autostart';
+
+  /// The registered global hotkey as `ctrl+alt+space`.
+  static const String desktopHotkey = 'armx.desktop.hotkey';
+
   /// Keys that hold no personal information and may be exported.
   static const List<String> exportable = <String>[
     themeMode,
@@ -108,6 +123,11 @@ abstract class AppPreferences with _$AppPreferences {
     @Default('') String pairingPairedAt,
     @Default(true) bool rememberDevice,
     @Default('') String sessionUserJson,
+    @Default(false) bool intercomEnabled,
+    @Default(false) bool intercomConsent,
+    @Default(false) bool intercomConsentLocked,
+    @Default(true) bool autostartEnabled,
+    @Default('ctrl+alt+space') String desktopHotkey,
   }) = _AppPreferences;
 
   const AppPreferences._();

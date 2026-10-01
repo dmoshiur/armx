@@ -13,6 +13,7 @@ import '../models/device.dart';
 // subclass without a circular import.
 part 'ws_events_assistant.dart';
 part 'ws_events_system.dart';
+part 'ws_events_intercom.dart';
 
 /// Wire names of the WebSocket events (mirrors `docs/api.md`).
 abstract final class WsEventType {
@@ -36,6 +37,15 @@ abstract final class WsEventType {
 
   /// Keep-alive.
   static const String heartbeat = 'system.heartbeat';
+
+  /// An Admin/Owner voice announcement is arriving on this device.
+  static const String intercomAnnouncement = 'intercom.announcement';
+
+  /// Delivery/playback outcome of an announcement (Admin log + user log).
+  static const String intercomOutcome = 'intercom.outcome';
+
+  /// A device's announcement consent changed (mirrors the recipient list).
+  static const String intercomConsent = 'intercom.consent';
 
   /// Anything this client version does not know yet.
   static const String unknown = 'unknown';
@@ -134,6 +144,28 @@ sealed class WsEvent {
         );
       case WsEventType.heartbeat:
         return HeartbeatEvent(receivedAt: receivedAt);
+      case WsEventType.intercomAnnouncement:
+        return IntercomAnnouncementEvent(
+          receivedAt: receivedAt,
+          announcementId: JsonUtils.string(json, 'announcement_id') ?? '',
+          fromName: JsonUtils.string(json, 'from_name') ?? 'Admin',
+          audioUrl: JsonUtils.string(json, 'audio_url') ?? '',
+          durationMs: JsonUtils.integer(json, 'duration_ms') ?? 0,
+          broadcast: JsonUtils.boolean(json, 'broadcast') ?? false,
+        );
+      case WsEventType.intercomOutcome:
+        return IntercomOutcomeEvent(
+          receivedAt: receivedAt,
+          announcementId: JsonUtils.string(json, 'announcement_id') ?? '',
+          targetUserId: JsonUtils.string(json, 'target_user_id') ?? '',
+          status: JsonUtils.string(json, 'status') ?? 'QUEUED',
+        );
+      case WsEventType.intercomConsent:
+        return IntercomConsentEvent(
+          receivedAt: receivedAt,
+          userId: JsonUtils.string(json, 'user_id') ?? '',
+          consented: JsonUtils.boolean(json, 'consented') ?? false,
+        );
       default:
         return UnknownEvent(
           receivedAt: receivedAt,

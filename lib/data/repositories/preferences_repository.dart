@@ -111,6 +111,21 @@ class PreferencesRepository {
       _database.writeSetting(PreferenceKeys.rememberDevice, remember.toString());
 
   /// Stores the signed-in profile JSON (empty when signed out).
+  Future<void> setIntercomEnabled(bool enabled) =>
+      _database.writeSetting(PreferenceKeys.intercomEnabled, enabled.toString());
+
+  Future<void> setIntercomConsent(bool enabled) =>
+      _database.writeSetting(PreferenceKeys.intercomConsent, enabled.toString());
+
+  Future<void> setIntercomConsentLocked(bool enabled) =>
+      _database.writeSetting(PreferenceKeys.intercomConsentLocked, enabled.toString());
+
+  Future<void> setAutostartEnabled(bool enabled) =>
+      _database.writeSetting(PreferenceKeys.autostartEnabled, enabled.toString());
+
+  Future<void> setDesktopHotkey(String hotkey) =>
+      _database.writeSetting(PreferenceKeys.desktopHotkey, hotkey);
+
   Future<void> setSessionUser(String userJson) =>
       _database.writeSetting(PreferenceKeys.sessionUser, userJson);
 
@@ -151,6 +166,11 @@ class PreferencesRepository {
         pairingPairedAt: _string(raw, PreferenceKeys.pairingPairedAt, ''),
         rememberDevice: _bool(raw, PreferenceKeys.rememberDevice, true),
         sessionUserJson: _string(raw, PreferenceKeys.sessionUser, ''),
+        intercomEnabled: _bool(raw, PreferenceKeys.intercomEnabled, false),
+        intercomConsent: _bool(raw, PreferenceKeys.intercomConsent, false),
+        intercomConsentLocked: _bool(raw, PreferenceKeys.intercomConsentLocked, false),
+        autostartEnabled: _bool(raw, PreferenceKeys.autostartEnabled, true),
+        desktopHotkey: _string(raw, PreferenceKeys.desktopHotkey, 'ctrl+alt+space'),
       );
 
   static String _string(Map<String, String> raw, String key, String fallback) {
