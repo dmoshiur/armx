@@ -12,7 +12,7 @@ import '../../core/platform/autostart_service.dart';
 import '../../core/platform/desktop_shell.dart';
 import '../../core/platform/device_availability.dart';
 import '../../core/providers.dart';
-import 'chat_controller.dart';
+import '../chat/chat_controller.dart';
 import 'desktop_state.dart';
 
 part 'desktop_controller.g.dart';
