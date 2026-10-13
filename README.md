@@ -140,11 +140,17 @@ fully usable with Bengali selected, and a missing Bengali string that fell back 
 fail `tool/static_checks.py` (which compares keys *and* placeholders, and rejects an identical
 EN/BN value unless the key is on the deliberate list of brand names and platform-copied strings).
 
+Keys are authored in one table, `tool/l10n_keys.py`, and both ARB files are generated from
+it, so EN and BN cannot drift and a key cannot ship without its Bengali string:
+
 ```bash
-python3 tool/l10n_add.py authNewKey "English text" "বাংলা লেখা"   # adds to both, keeps order
-python3 tool/l10n_gen.py                                          # reports key count and drift
-flutter gen-l10n
+# 1. add the pair (EN + BN, same placeholders) to KEYS in tool/l10n_keys.py
+python3 tool/l10n_gen.py     # rewrites both ARB files, refusing duplicates or a missing BN
+flutter gen-l10n             # writes lib/l10n/generated/
 ```
+
+`tool/l10n_add.py <file.json>` is there for patching existing entries without touching the
+table; it writes both files only when both merges succeed.
 
 Bengali runs longer than English, so screens reflow rather than relying on truncation; text
 scaling is honoured and clamped to 0.9–1.6.
