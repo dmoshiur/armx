@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'app.dart';
+import 'features/overlay/presentation/overlay_bubble_entry.dart';
 import 'core/config/app_config.dart';
 import 'core/providers.dart';
 
@@ -38,6 +39,15 @@ import 'core/providers.dart';
 /// unusable assistant. If the *configuration* is invalid (a cleartext URL in a release
 /// build), `runApp` is never reached — the process fails loudly instead of talking to a
 /// server in the clear.
+/// The floating bubble's entry point.
+///
+/// `flutter_overlay_window` starts a second engine and calls this symbol by name, so it must
+/// be a top-level function in the entry-point library and it must survive tree shaking. It is
+/// declared here, in one line, so there is exactly one obvious answer to "where does the
+/// overlay start?" — the UI it runs lives in the overlay feature.
+@pragma('vm:entry-point')
+void overlayMain() => overlayBubbleMain();
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 

@@ -1,51 +1,122 @@
 <!-- Copyright (c) 2026 Md. Moshiur Rahman Mohi / THAMJJ13.TOP. Proprietary. All Rights Reserved. -->
+<!--
+  A.R.M.X AI — Android manifest.
+
+  Every permission here is requested at the moment it is needed and explained on the Settings →
+  Permissions screen, in this order of escalation:
+
+    INTERNET, ACCESS_NETWORK_STATE      the backend transport (also used by the WebSocket)
+    RECORD_AUDIO                        push-to-talk only, while the button is held
+    CAMERA                              the guest-greeter preview
+    POST_NOTIFICATIONS                  alarm rings, tool approvals, finished deploys
+    SYSTEM_ALERT_WINDOW                 the floating assistant bubble (optional, revocable)
+    USE_BIOMETRIC                       re-auth for HIGH-risk confirmations (local_auth)
+    SCHEDULE_EXACT_ALARM, WAKE_LOCK     an alarm must ring on time with the screen off
+    VIBRATE                             the ring's haptic pattern
+
+  Nothing here is a secret and nothing is a convenience for tracking: there is no
+  AD_ID, no ACCESS_BACKGROUND_LOCATION, no READ_PHONE_STATE and no QUERY_ALL_PACKAGES.
+-->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <!-- Needed for the configured REST/WebSocket transport when a real backend is enabled. -->
+    <!-- ---- Transport ------------------------------------------------------ -->
     <uses-permission android:name="android.permission.INTERNET" />
-    <!-- Runtime access required for the microphone foreground-service type and wake-word capture in the next delivery. -->
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
+    <!-- ---- Voice and vision ---------------------------------------------- -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
-    <!-- Allows the app to promote the user-started listening service to foreground. -->
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-    <!-- Android 14+ requires the type-specific permission for microphone foreground services. -->
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
-    <!-- Android 13+ runtime permission for the persistent, user-visible service notification. -->
+    <uses-permission android:name="android.permission.CAMERA" />
+
+    <!-- ---- Assistant lifecycle ------------------------------------------- -->
+    <!-- The mic is only ever opened in the foreground, so no microphone foreground service is
+         declared: a service that could keep listening in the background is exactly the kind of
+         capability this product refuses to hold. -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
-    <!-- Light haptic acknowledgement after an on-device wake-word match. -->
     <uses-permission android:name="android.permission.VIBRATE" />
-    <!-- Biometric / device-credential prompt shown by the step-2 app-lock gate (local_auth). -->
     <uses-permission android:name="android.permission.USE_BIOMETRIC" />
 
-    <!-- The rest of A.R.M.X remains installable on devices without a microphone. -->
+    <!-- ---- The floating bubble ------------------------------------------- -->
+    <!-- Draws a small handle over other apps. Optional, revocable, and off until the owner
+         turns it on: see lib/features/overlay/. -->
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+    <!-- The bubble is a foreground service while it is on screen, so Android always shows the
+         user that something of this app is running over their other apps. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+
+    <!-- ---- Alarms --------------------------------------------------------- -->
+    <!-- An alarm that rings late is a broken alarm. SCHEDULE_EXACT_ALARM is user-grantable on
+         Android 12+; the Settings → Permissions screen reports it as "background" and links to
+         the system screen when it is not granted. -->
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+
+    <!-- The app remains installable on a device without a camera or a microphone: those
+         features degrade loudly and visibly rather than making the whole product unavailable. -->
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
     <uses-feature android:name="android.hardware.microphone" android:required="false" />
 
     <application
-        android:name="${applicationName}"
         android:label="@string/app_name"
-        android:icon="@android:drawable/sym_def_app_icon">
+        android:icon="@drawable/ic_launcher"
+        android:roundIcon="@drawable/ic_launcher"
+        android:allowBackup="false"
+        android:usesCleartextTraffic="false"
+        android:supportsRtl="true"
+        android:enableOnBackInvokedCallback="true"
+        android:theme="@style/NormalTheme">
+
         <activity
             android:name=".MainActivity"
-            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
             android:exported="true"
-            android:hardwareAccelerated="true"
             android:launchMode="singleTop"
             android:theme="@style/LaunchTheme"
-            android:windowSoftInputMode="adjustResize">
+            android:hardwareAccelerated="true"
+            android:windowSoftInputMode="adjustResize"
+            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode">
+
+            <!-- NormalTheme is applied once the launch screen has finished, so the theme the
+                 Flutter UI starts in is the one the user's preference asks for. -->
             <meta-data
                 android:name="io.flutter.embedding.android.NormalTheme"
                 android:resource="@style/NormalTheme" />
+
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+
+            <!--
+              Password-reset deep link. The link carries a one-time token that the reset screen
+              validates *before* showing a form, so an expired link gets its own state rather
+              than a form that fails on submit. `armx://reset-password?token=…`
+            -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="armx" android:host="reset-password" />
+            </intent-filter>
+
+            <!-- Email verification links use the same scheme with a different host. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="armx" android:host="verify-email" />
+            </intent-filter>
         </activity>
 
+        <!-- The floating bubble's host service, declared by flutter_overlay_window. The
+             `specialUse` subtype is stated in words because Android 14+ shows it to the user. -->
         <service
-            android:name=".ArmxListenService"
-            android:enabled="true"
+            android:name="flutter.overlay.window.flutter_overlay_window.OverlayService"
             android:exported="false"
-            android:foregroundServiceType="microphone"
-            android:stopWithTask="false" />
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Shows the A.R.M.X AI assistant bubble over other apps while the user has turned it on. It does not read the screen or capture input." />
+        </service>
 
         <meta-data android:name="flutterEmbedding" android:value="2" />
     </application>

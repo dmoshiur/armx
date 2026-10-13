@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Copyright (c) 2026 Md. Moshiur Rahman Mohi / THAMJJ13.TOP. Proprietary. All Rights Reserved. -->
+<resources>
+    <!-- Shown under the launcher icon. Kept short on purpose: the launcher truncates. -->
+    <string name="app_name">A.R.M.X AI</string>
+</resources>

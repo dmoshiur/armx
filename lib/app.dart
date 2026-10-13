@@ -1,5 +1,7 @@
 // Copyright (c) 2026 Md. Moshiur Rahman Mohi / THAMJJ13.TOP. Proprietary. All Rights Reserved.
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -7,12 +9,15 @@ import 'package:go_router/go_router.dart';
 
 import '../l10n/generated/app_localizations.dart';
 import 'core/config/app_config.dart';
+import 'core/router/routes.dart';
 import 'core/network/websocket_client.dart';
 import 'core/preferences/preferences_store.dart';
 import 'core/providers.dart';
 import 'core/router/app_router.dart';
 import 'features/auth/application/auth_controller.dart';
 import 'features/auth/data/auth_models.dart';
+import 'features/overlay/application/overlay_bubble_controller.dart';
+import 'features/overlay/application/overlay_host.dart';
 import 'core/theme/app_theme.dart';
 
 /// The application widget.
@@ -41,9 +46,45 @@ class ArmxApp extends ConsumerStatefulWidget {
 }
 
 class _ArmxAppState extends ConsumerState<ArmxApp> {
+  StreamSubscription<Object?>? _bubbleEvents;
+
   /// The saved locale, or the device's if the user has never chosen one.
   Locale _localeFor(AppPreferences preferences) =>
       Locale(preferences.localeCode);
+
+  @override
+  void initState() {
+    super.initState();
+    // The floating bubble runs in its own isolate with no session and no router, so it sends
+    // intents here as data. They are handled in exactly one place, which is what keeps a
+    // second engine from becoming a second source of navigation.
+    _bubbleEvents =
+        ref.read(overlayBubbleHostProvider).events.listen(_onBubbleEvent);
+  }
+
+  @override
+  void dispose() {
+    _bubbleEvents?.cancel();
+    super.dispose();
+  }
+
+  /// Routes what the bubble asked for. Unknown payloads are ignored rather than guessed at.
+  void _onBubbleEvent(Object? event) {
+    if (event is! Map) {
+      return;
+    }
+    final Object? name = event['event'];
+    final GoRouter router = ref.read(appRouterProvider);
+    if (name == 'open-assistant') {
+      // Opening the assistant from the bubble means the app is about to be in the
+      // foreground, and the bubble closes itself when tapped — so the truthful state here is
+      // "no window on screen", recorded rather than assumed.
+      ref.read(overlayBubbleProvider.notifier).reportAttached(attached: false);
+      router.go(Routes.assistant);
+    } else if (name == 'bring-app') {
+      router.go(Routes.home);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {

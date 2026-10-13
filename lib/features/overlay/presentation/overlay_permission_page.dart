@@ -18,6 +18,7 @@ import '../../../core/widgets/armx_confirm_dialog.dart';
 import '../../../core/widgets/armx_empty_state.dart';
 import '../../../core/widgets/armx_status_dot.dart';
 import '../application/overlay_bubble_controller.dart';
+import '../application/overlay_host.dart';
 import 'widgets/bubble_preview.dart';
 
 /// The floating assistant bubble: what it is, what it costs, and how to switch it on.
@@ -229,6 +230,7 @@ class _OverlayPermissionPageState extends ConsumerState<OverlayPermissionPage> {
     if (!confirmed || !mounted) {
       return;
     }
+
     await ref.read(overlayBubbleProvider.notifier).enable();
     if (!mounted) {
       return;
@@ -237,13 +239,41 @@ class _OverlayPermissionPageState extends ConsumerState<OverlayPermissionPage> {
       ScaffoldMessenger.maybeOf(context)?.showSnackBar(
         SnackBar(content: Text(context.l10n.overlayDeniedNotice)),
       );
+      return;
+    }
+
+    // Permission is not the same as a window: the host is asked to attach one, and only its
+    // answer decides whether the status line says the bubble is on screen.
+    final OverlayBubbleHost host = ref.read(overlayBubbleHostProvider);
+    final OverlayBubbleController controller =
+        ref.read(overlayBubbleProvider.notifier);
+    try {
+      await host.show(
+        notificationTitle: context.l10n.overlayTitle,
+        notificationBody: context.l10n.overlayExplain,
+      );
+      final bool attached = await host.isActive();
+      controller.reportAttached(attached: attached);
+      if (!attached) {
+        controller.reportFailure(context.l10n.overlayNotRunning);
+      }
+    } on Object catch (error) {
+      controller.reportFailure('${context.l10n.overlayNotRunning} ($error)');
     }
   }
 
-  /// Switching off is unconditional and unconfirmed.
+  /// Switching off is unconditional and unconfirmed: removing a floating window is safe.
   Future<void> _disable() async {
-    ref.read(overlayBubbleProvider.notifier).disable();
-    await ref.read(overlayBubbleProvider.notifier).refresh();
+    final OverlayBubbleHost host = ref.read(overlayBubbleHostProvider);
+    final OverlayBubbleController controller =
+        ref.read(overlayBubbleProvider.notifier);
+    controller.disable();
+    try {
+      await host.hide();
+    } on Object catch (error) {
+      controller.reportFailure('$error');
+    }
+    await controller.refresh();
   }
 }
 

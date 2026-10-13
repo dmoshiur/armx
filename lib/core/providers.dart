@@ -61,24 +61,10 @@ class AuthFailureSink extends Notifier<AppException?> {
   void clear() => state = null;
 }
 
-/// The backend contract: the mock by default, the REST/WebSocket transport otherwise.
-///
-/// `--dart-define=ARMX_USE_MOCK_BACKEND=false` switches to the real transport. There is no
-/// third option: a build that cannot reach a backend fails loudly instead of pretending to
-/// be connected.
-final Provider<ArmxApi> armxApiProvider = Provider<ArmxApi>((Ref ref) {
-  final AppConfig config = ref.watch(appConfigProvider);
-  if (config.useMockBackend) {
-    return MockArmxApi(clock: () => DateTime.now());
-  }
-  return RestArmxApi(
-    client: ref.watch(apiClientProvider),
-    socket: null,
-    config: config,
-  );
-});
-
 /// The assistant/telemetry socket, created lazily because it needs a token source.
+///
+/// The access token is read from secure storage on every (re)connect rather than captured
+/// once, so a token refreshed after a drop is the one that authenticates the new socket.
 final Provider<WebSocketClient> webSocketProvider = Provider<WebSocketClient>((Ref ref) {
   final AppConfig config = ref.watch(appConfigProvider);
   final WebSocketClient client = WebSocketClient(
@@ -90,6 +76,28 @@ final Provider<WebSocketClient> webSocketProvider = Provider<WebSocketClient>((R
   );
   ref.onDispose(client.dispose);
   return client;
+});
+
+/// The backend contract: the mock by default, the REST/WebSocket transport otherwise.
+///
+/// `--dart-define=ARMX_USE_MOCK_BACKEND=false` switches to the real transport. There is no
+/// third option: a build that cannot reach a backend fails loudly instead of pretending to
+/// be connected.
+///
+/// The same socket instance the connection indicator reads is the one the assistant streams
+/// through, so the state on screen and the state behind the transcript cannot disagree. In a
+/// mock build there is no socket at all — the mock answers locally and says so everywhere it
+/// is shown.
+final Provider<ArmxApi> armxApiProvider = Provider<ArmxApi>((Ref ref) {
+  final AppConfig config = ref.watch(appConfigProvider);
+  if (config.useMockBackend) {
+    return MockArmxApi(clock: () => DateTime.now());
+  }
+  return RestArmxApi(
+    client: ref.watch(apiClientProvider),
+    socket: ref.watch(webSocketProvider),
+    config: config,
+  );
 });
 
 /// User preferences, loaded once at launch.
