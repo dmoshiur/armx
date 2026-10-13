@@ -2,163 +2,147 @@
 
 import 'package:flutter/foundation.dart';
 
-import '../errors/app_exception.dart';
-
-/// Log levels understood by the app (mapped onto `package:logger` in `core/logging`).
-enum AppLogLevel { trace, debug, info, warning, error, off }
-
-/// Deployment environment. Only [AppEnvironment.production] enforces strict TLS.
-enum AppEnvironment { development, staging, production }
-
-/// Immutable, compile-time configuration for A.R.M.X AI.
+/// Compile-time configuration.
 ///
-/// Every value comes from `--dart-define` (or the defaults below), so **no secret is
-/// ever committed to the repository**. See `docs/run.md` for the full list of defines.
+/// ## Security rule (§8)
+///
+/// Nothing secret ever lives in Dart source or `pubspec.yaml`. The **only** value that
+/// crosses the build boundary is the backend's *public* base URL and the mock switch, both
+/// supplied with `--dart-define`:
+///
+/// ```bash
+/// flutter run \
+///   --dart-define=ARMX_API_BASE_URL=https://armx.local:8443 \
+///   --dart-define=ARMX_USE_MOCK_BACKEND=false
+/// ```
+///
+/// API keys, signing keys and client secrets are **not** representable by this class: the
+/// client authenticates with a user session only. Release builds refuse a cleartext base
+/// URL outright (see [AppConfig.httpsBaseUrl]).
 @immutable
 class AppConfig {
-  /// Creates a configuration value. Prefer [AppConfig.fromEnvironment] in app code.
+  /// Creates a configuration.
   const AppConfig({
-    required this.environment,
     required this.apiBaseUrl,
-    required this.wsUrl,
+    required this.webSocketUrl,
     required this.useMockBackend,
-    this.logLevel = AppLogLevel.info,
-    this.certificatePins = const <String>[],
-    this.mockLatencyMs = 120,
-    this.wakeWordEngineId = 'stub',
-    this.faceMatchThreshold = 0.72,
-    this.palmGestureEnabled = true,
-    this.telemetryEnabled = false,
+    required this.environment,
+    this.requestTimeout = const Duration(seconds: 20),
+    this.connectTimeout = const Duration(seconds: 12),
+    this.allowCleartextInDebug = false,
   });
 
-  /// Reads configuration from `--dart-define` values.
-  ///
-  /// Throws [ConfigException] when the supplied values are unusable (bad URL, cleartext
-  /// endpoint in a release build, malformed certificate pin, out-of-range threshold).
+  /// Reads the configuration from the compile-time environment.
   factory AppConfig.fromEnvironment() {
-    const environmentName = String.fromEnvironment('APP_ENV', defaultValue: 'development');
-    const useMock = bool.fromEnvironment('USE_MOCK', defaultValue: true);
-    const baseUrl = String.fromEnvironment('API_BASE_URL', defaultValue: 'https://api.armx.local');
-    const socketUrl = String.fromEnvironment('WS_URL', defaultValue: '');
-    const logLevelName = String.fromEnvironment('LOG_LEVEL', defaultValue: 'info');
-    const pins = String.fromEnvironment('CERT_PINS', defaultValue: '');
-    const latency = int.fromEnvironment('MOCK_LATENCY_MS', defaultValue: 120);
-    const wake = String.fromEnvironment('WAKE_WORD_ENGINE', defaultValue: 'stub');
-    const threshold = double.fromEnvironment('FACE_MATCH_THRESHOLD', defaultValue: 0.72);
-    const telemetry = bool.fromEnvironment('TELEMETRY', defaultValue: false);
-
-    final environment = switch (environmentName) {
-      'staging' => AppEnvironment.staging,
-      'production' => AppEnvironment.production,
-      _ => AppEnvironment.development,
-    };
-    final apiBase = _parseUri('API_BASE_URL', baseUrl);
-    final ws = socketUrl.isEmpty ? _deriveWsUrl(apiBase) : _parseUri('WS_URL', socketUrl);
-    final parsedPins = pins
-        .split(',')
-        .map((pin) => pin.trim())
-        .where((pin) => pin.isNotEmpty)
-        .toList(growable: false);
-    final logLevel = AppLogLevel.values.firstWhere(
-      (level) => level.name == logLevelName,
-      orElse: () => AppLogLevel.info,
+    const String rawBase = String.fromEnvironment(
+      'ARMX_API_BASE_URL',
+      defaultValue: _defaultBase,
+    );
+    const String rawSocket = String.fromEnvironment('ARMX_WS_URL', defaultValue: '');
+    const bool mock = bool.fromEnvironment(
+      'ARMX_USE_MOCK_BACKEND',
+      defaultValue: true,
+    );
+    const String env = String.fromEnvironment(
+      'ARMX_ENVIRONMENT',
+      defaultValue: 'development',
     );
 
-    final config = AppConfig(
-      environment: environment,
-      apiBaseUrl: apiBase,
-      wsUrl: ws,
-      useMockBackend: useMock,
-      logLevel: logLevel,
-      certificatePins: parsedPins,
-      mockLatencyMs: latency < 0 ? 0 : latency,
-      wakeWordEngineId: wake,
-      faceMatchThreshold: threshold.clamp(0.1, 0.99),
-      telemetryEnabled: telemetry,
+    final Uri base = Uri.parse(rawBase);
+    return AppConfig(
+      apiBaseUrl: base,
+      webSocketUrl: rawSocket.isEmpty ? _socketFrom(base) : Uri.parse(rawSocket),
+      useMockBackend: mock,
+      environment: env,
+      // Cleartext is tolerated in a debug *mock* build only, so `flutter run` works on a
+      // LAN address; it is never tolerated in release (asserted in AppConfig.httpsBaseUrl
+      // and by test/unit/core/config/app_config_test.dart).
+      allowCleartextInDebug: kDebugMode && mock,
     );
-    config.validate();
-    return config;
   }
 
-  /// Deployment environment this build targets.
-  final AppEnvironment environment;
+  /// Product name, shown in About and used by the Android package label.
+  static const String appName = 'A.R.M.X AI';
 
-  /// REST base URL, for example `https://api.armx.example`.
+  /// Version string. Kept in step with `pubspec.yaml`'s `version:` field by hand, because
+  /// `package_info_plus` would add a plugin for one constant.
+  static const String appVersion = '1.0.0';
+
+  /// Build label. `dev` on a working tree, a tag in CI.
+  static const String buildLabel = String.fromEnvironment(
+    'ARMX_BUILD_LABEL',
+    defaultValue: 'dev',
+  );
+
+  /// Owner. Copyright holder for the whole tree.
+  static const String owner = 'Md. Moshiur Rahman Mohi';
+
+  /// Brand.
+  static const String brand = 'THAMJJ13.TOP';
+
+  /// Default base URL for a local development server.
+  static const String _defaultBase = 'https://armx.local:8443';
+
+  /// Backend REST base URL.
   final Uri apiBaseUrl;
 
-  /// WebSocket endpoint for assistant/tool/device events, for example `wss://…/ws`.
-  final Uri wsUrl;
+  /// Assistant/telemetry WebSocket URL.
+  final Uri webSocketUrl;
 
-  /// When true the app runs entirely on the in-app deterministic mock backend.
+  /// When true the app runs against the deterministic in-app mock backend.
+  ///
+  /// The mock implements the same contract as the server (see `docs/api.md`) so every
+  /// screen, flow and widget test is exercisable with no hardware and no network.
   final bool useMockBackend;
 
-  /// Minimum level written by the logger.
-  final AppLogLevel logLevel;
+  /// Free-form environment name, shown in Diagnostics.
+  final String environment;
 
-  /// SHA-256 SPKI pins (`sha256/…` or bare base64). Empty means "no pinning".
-  final List<String> certificatePins;
+  /// Per-request timeout for REST calls.
+  final Duration requestTimeout;
 
-  /// Simulated latency for the mock backend (keeps the UI honest about loading states).
-  final int mockLatencyMs;
+  /// Timeout for establishing the WebSocket.
+  final Duration connectTimeout;
 
-  /// Wake-word engine identifier: `stub`, `porcupine` or `openwakeword`.
-  final String wakeWordEngineId;
+  /// Whether a cleartext (`http://`) base URL is tolerated. Debug + mock builds only.
+  final bool allowCleartextInDebug;
 
-  /// Default cosine-similarity threshold for face verification (overridable in Settings).
-  final double faceMatchThreshold;
-
-  /// Whether the palm-open gesture listener is enabled by default.
-  final bool palmGestureEnabled;
-
-  /// Opt-in anonymous diagnostics. Off by default; there is no analytics SDK in this app.
-  final bool telemetryEnabled;
-
-  /// True when the build must refuse cleartext transport.
-  bool get requiresTls => environment == AppEnvironment.production;
-
-  /// True when a non-empty certificate pin set is configured.
-  bool get hasCertificatePins => certificatePins.isNotEmpty;
-
-  /// True while the app is expected to run without a backend.
-  bool get isOfflineFirst => useMockBackend;
-
-  /// Human readable, **secret-free** summary used by the About/Diagnostics screen.
-  String describe() => 'environment=${environment.name} api=${apiBaseUrl.origin} '
-      'ws=${wsUrl.origin} mock=$useMockBackend pins=${certificatePins.length} '
-      'wakeWord=$wakeWordEngineId log=${logLevel.name}';
-
-  /// Enforces the security invariants of this configuration.
-  void validate() {
-    if (requiresTls && apiBaseUrl.scheme != 'https') {
-      throw const ConfigException(
-        'Refusing to start: release builds require an https API_BASE_URL.',
-      );
+  /// The base URL, validated.
+  ///
+  /// Throws [ArgumentError] when the URL is cleartext and this build is not an explicitly
+  /// permitted debug/mock build: an assistant that carries camera frames, transcripts and
+  /// unlock tokens must never silently talk to the server in the clear.
+  Uri get httpsBaseUrl {
+    if (apiBaseUrl.scheme == 'https') {
+      return apiBaseUrl;
     }
-    if (requiresTls && wsUrl.scheme != 'wss') {
-      throw const ConfigException(
-        'Refusing to start: release builds require a wss WS_URL.',
-      );
+    if (allowCleartextInDebug) {
+      return apiBaseUrl;
     }
-    if (!useMockBackend && apiBaseUrl.host.isEmpty) {
-      throw const ConfigException('API_BASE_URL must contain a host when USE_MOCK=false.');
-    }
-    for (final pin in certificatePins) {
-      if (pin.length < 32) {
-        throw const ConfigException('CERT_PINS entries must be base64 SHA-256 digests.');
-      }
-    }
+    throw ArgumentError.value(
+      apiBaseUrl.toString(),
+      'apiBaseUrl',
+      'Cleartext base URLs are rejected outside debug mock builds. '
+          'Pass --dart-define=ARMX_API_BASE_URL=https://…',
+    );
   }
 
-  static Uri _parseUri(String name, String raw) {
-    final uri = Uri.tryParse(raw.trim());
-    if (uri == null || uri.host.isEmpty) {
-      throw ConfigException('$name is not a valid absolute URL: "$raw".');
-    }
-    return uri;
-  }
+  /// True when the configured transport is TLS.
+  bool get isSecure => apiBaseUrl.scheme == 'https';
 
-  static Uri _deriveWsUrl(Uri apiBase) {
-    final scheme = apiBase.scheme == 'https' ? 'wss' : 'ws';
-    return apiBase.replace(scheme: scheme, path: '/ws');
+  /// A short summary for Diagnostics. Contains no secret and no token.
+  Map<String, Object?> describe() => <String, Object?>{
+        'baseUrl': apiBaseUrl.toString(),
+        'socket': webSocketUrl.toString(),
+        'mock': useMockBackend,
+        'environment': environment,
+        'secure': isSecure,
+      };
+
+  static Uri _socketFrom(Uri base) {
+    return base.replace(
+      scheme: base.scheme == 'https' ? 'wss' : 'ws',
+      path: '${base.path.isEmpty ? '' : base.path}/ws',
+    );
   }
 }

@@ -1,98 +1,96 @@
 #!/usr/bin/env python3
 # Copyright (c) 2026 Md. Moshiur Rahman Mohi / THAMJJ13.TOP. Proprietary. All Rights Reserved.
-#
-# Adds localization keys to *both* ARB files in one step, so English and Bengali can never
-# drift apart. The insertion is textual and preserves the existing file formatting (the
-# template keeps one-line "@key": {...} metadata, which a JSON re-serialization would
-# expand and pollute the diff with).
-#
-# Usage:
-#   python3 tool/l10n_add.py keys.json
-#
-# where keys.json is:
-#   {
-#     "voiceTitle": {
-#       "en": "Voice",
-#       "bn": "ভয়েস",
-#       "placeholders": {"name": "String"}     # optional
-#     }
-#   }
-#
-# Existing keys are replaced in place. Every added key is validated by
-# tool/static_checks.py (header, placeholder parity, en/bn parity).
+"""Add localization keys to BOTH ARB files atomically.
+
+Usage:
+    python3 tool/l10n_add.py keys.json
+
+`keys.json` is a list of objects:
+
+    [
+      {"key": "loginTitle", "en": "Sign in", "bn": "সাইন ইন",
+       "placeholders": {"email": {"type": "String", "example": "a@b.com"}},
+       "description": "Login screen headline"}
+    ]
+
+`en`, `bn` and `description` are optional when the key already exists (a rewrite), but a
+new key needs at least `en` and `bn`. The script refuses to write a half-applied change:
+English is updated first in memory, Bengali second, and both files are written only when
+both merges succeed. Existing keys keep their original position so diffs stay small.
+"""
 
 from __future__ import annotations
 
 import json
+import os
 import sys
-from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
-EN = ROOT / "lib" / "l10n" / "app_en.arb"
-BN = ROOT / "lib" / "l10n" / "app_bn.arb"
-
-
-def render_entry(key: str, value: str, placeholders: dict[str, str] | None) -> str:
-    lines = [f'  "{key}": {json.dumps(value, ensure_ascii=False)}']
-    if placeholders:
-        rendered = ", ".join(
-            f'"{name}": {{"type": "{kind}"}}' for name, kind in placeholders.items()
-        )
-        lines.append(f'  "@{key}": {{"placeholders": {{{rendered}}}}}')
-    return ",\n".join(lines)
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+EN_PATH = os.path.join(ROOT, "lib", "l10n", "app_en.arb")
+BN_PATH = os.path.join(ROOT, "lib", "l10n", "app_bn.arb")
 
 
-def upsert(path: Path, key: str, value: str, placeholders: dict[str, str] | None) -> bool:
-    """Replaces or appends one key. Returns True when the file changed."""
-    text = path.read_text(encoding="utf-8")
-    existing = json.loads(text)
-
-    entry = render_entry(key, value, placeholders)
-    needle = f'  "{key}": '
-    if needle in text:
-        if path == BN or path == EN:
-            # Replace the value line (and leave any existing metadata alone).
-            lines = text.splitlines()
-            for index, line in enumerate(lines):
-                if line.startswith(needle):
-                    suffix = "," if line.rstrip().endswith(",") else ""
-                    lines[index] = f'  "{key}": {json.dumps(value, ensure_ascii=False)}{suffix}'
-                    break
-            text = "\n".join(lines) + ("\n" if text.endswith("\n") else "")
-        else:  # pragma: no cover - defensive
-            text = text.replace(needle, f'  "{key}": ')
-        path.write_text(text, encoding="utf-8")
-        return True
-
-    # Append before the final closing brace, keeping the trailing newline.
-    closing = text.rstrip().rfind("}")
-    prefix = text[:closing].rstrip()
-    if not prefix.endswith(","):
-        prefix += ","
-    updated = f"{prefix}\n{entry}\n}}\n"
-    path.write_text(updated, encoding="utf-8")
-    return True
+def load(path: str) -> dict:
+    with open(path, encoding="utf-8") as handle:
+        return json.load(handle)
 
 
-def main() -> int:
-    if len(sys.argv) != 2:
+def dump(path: str, data: dict) -> None:
+    with open(path, "w", encoding="utf-8") as handle:
+        json.dump(data, handle, ensure_ascii=False, indent=2)
+        handle.write("\n")
+
+
+def merge(target: dict, entry: dict, is_template: bool) -> None:
+    key = entry["key"]
+    body = entry.get("en" if is_template else "bn")
+    if body is None:
+        if key in target:
+            return
+        raise SystemExit(f"key '{key}' is new and needs an "
+                         f"'{('en' if is_template else 'bn')}' value")
+    if key in target and target[key] == body:
+        return
+    target[key] = body
+    if is_template:
+        meta: dict = {}
+        if entry.get("placeholders"):
+            meta["placeholders"] = entry["placeholders"]
+        if entry.get("description"):
+            meta["description"] = entry["description"]
+        if meta:
+            target[f"@{key}"] = meta
+    else:
+        if entry.get("description") and f"@{key}" not in target:
+            target[f"@{key}"] = {"description": entry["description"]}
+
+
+def main(argv: list[str]) -> int:
+    if len(argv) != 2:
         print(__doc__)
         return 2
-    payload = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
-    for key, entry in payload.items():
-        en_value = entry["en"]
-        bn_value = entry["bn"]
-        placeholders = entry.get("placeholders")
-        if not placeholders:
-            placeholders = {
-                name: "String"
-                for name in json.loads(json.dumps(entry.get("placeholder_types", {})))
-            }
-        upsert(EN, key, en_value, placeholders or None)
-        upsert(BN, key, bn_value, placeholders or None)
-        print(f"added {key}")
+    with open(argv[1], encoding="utf-8") as handle:
+        entries = json.load(handle)
+    if not isinstance(entries, list):
+        raise SystemExit("keys.json must contain a list of objects")
+
+    en = load(EN_PATH)
+    bn = load(BN_PATH)
+    added = 0
+    for entry in entries:
+        if "key" not in entry:
+            raise SystemExit(f"entry without a 'key': {entry!r}")
+        before = entry["key"] in en
+        merge(en, entry, is_template=True)
+        merge(bn, entry, is_template=False)
+        if not before:
+            added += 1
+    dump(EN_PATH, en)
+    dump(BN_PATH, bn)
+    print(f"applied {len(entries)} key(s) to app_en.arb and app_bn.arb "
+          f"({added} new)")
     return 0
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(main(sys.argv))

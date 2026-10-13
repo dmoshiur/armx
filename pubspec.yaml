@@ -1,16 +1,24 @@
 # Copyright (c) 2026 Md. Moshiur Rahman Mohi / THAMJJ13.TOP. Proprietary. All Rights Reserved.
 #
-# A.R.M.X AI — Automated Resource Management eXtension (client).
-# Every dependency is PINNED EXACTLY (no ^, no ranges) so builds are reproducible.
-# Version resolution notes and deliberate substitutions are documented in docs/decisions/0002-dependency-pins.md
-# and README.md ("Dependency decisions").
+# A.R.M.X AI — Automated Resource Management eXtension (Flutter frontend).
+#
+# Every dependency is PINNED EXACTLY (no ^, no ranges) so a clone, a CI run and a release
+# build resolve the identical graph. Rationale and the full pin table live in
+# docs/decisions/0001-dependency-pins.md.
+#
+# This project is deliberately CODEGEN-FREE: there is no build_runner, no freezed, no
+# drift, no json_serializable and no riverpod_generator. Models and providers are
+# hand-written, so a fresh clone compiles after `flutter pub get` alone — see
+# docs/decisions/0002-no-codegen.md.
 
 name: armx_ai
 description: >-
   A.R.M.X AI (Automated Resource Management eXtension) client application.
+  Voice-first bilingual (Bengali + English) assistant platform with Admin, VIP and User
+  roles, targeting phone, tablet, desktop and web from one codebase.
   Owner: Md. Moshiur Rahman Mohi. Brand: THAMJJ13.TOP. Proprietary software.
 publish_to: "none"
-version: 0.1.0+1
+version: 1.0.0+1
 
 environment:
   # Flutter 3.47.5 ships Dart 3.13.4 (stable, 2026-09-18). Floor is 3.12.0 because
@@ -25,84 +33,46 @@ dependencies:
     sdk: flutter
 
   # ---- State management ----------------------------------------------------
-  flutter_riverpod: 3.4.3 # latest stable on the 3.4 line
-  riverpod_annotation: 4.0.7 # generator 4.0.9 <-> annotation 4.0.7 is the published pairing
+  flutter_riverpod: 3.4.3
 
   # ---- Routing -------------------------------------------------------------
   go_router: 18.0.2
 
-  # ---- Models --------------------------------------------------------------
-  freezed_annotation: 3.1.0
-  json_annotation: 4.12.0
-
-  # ---- Local database (offline cache, prefs, outbox) -----------------------
-  drift: 2.35.0
-  drift_flutter: 0.3.1 # bundles path_provider + sqlite3_flutter_libs wiring for all target platforms
-
-  # ---- Logging -------------------------------------------------------------
-  logger: 2.7.0
-
   # ---- Network -------------------------------------------------------------
-  dio: 5.11.1
-  web_socket_channel: 3.0.1
+  dio: 5.11.1 # the only HTTP client; screens never touch it directly
+  web_socket_channel: 3.0.1 # assistant streaming + device telemetry
 
-  # ---- Secure storage + crypto --------------------------------------------
-  flutter_secure_storage: 10.3.4
-  cryptography: 2.9.0 # Ed25519 + SHA-256 (package:crypto has no Ed25519)
+  # ---- Storage -------------------------------------------------------------
+  flutter_secure_storage: 10.3.4 # JWT / refresh token ONLY (never SharedPreferences)
+  shared_preferences: 2.5.3 # non-secret UI preferences only
+
+  # ---- Localization + formatting -------------------------------------------
+  intl: 0.20.3 # must match the version flutter_localizations pins on Flutter 3.47
+
+  # ---- Security ------------------------------------------------------------
+  crypto: 3.0.6 # SHA-256 for pairing fingerprints (no secrets in source)
+  local_auth: 3.0.2 # re-auth for HIGH-risk confirmations; biometrics never leave the device
 
   # ---- Voice ---------------------------------------------------------------
-  speech_to_text: 7.5.0
-  flutter_tts: 4.2.5
+  speech_to_text: 7.5.0 # push-to-talk + wake-word partials
+  flutter_tts: 4.2.5 # spoken assistant replies (EN + BN)
+  record: 7.1.1 # raw capture used by the voice-note and guest-greeter flows
 
-  # ---- Vision --------------------------------------------------------------
-  camera: 0.12.1
-  google_mlkit_face_detection: 0.13.2
-  google_mlkit_pose_detection: 0.14.1 # palm gesture; Android/iOS only (desktop degrades gracefully)
-  tflite_flutter: 0.12.1 # face embeddings, on-device only
+  # ---- Vision / camera -----------------------------------------------------
+  camera: 0.12.1 # guest-greeter preview (Android/iOS/web; desktop degrades honestly)
+  qr_flutter: 4.1.0 # render the pairing QR
+  mobile_scanner: 7.0.1 # decode a pairing QR (Android/iOS/web; manual entry is always offered too)
+  flutter_overlay_window: 0.5.0 # the Android floating bubble (overlay + foreground-service glue)
 
-  # ---- Device / system -----------------------------------------------------
-  local_auth: 3.0.2
-  permission_handler: 13.0.2
-  geolocator: 14.1.1
-
-  # ---- Desktop background + hotkey mode (Windows / macOS / Linux) ----------
-  tray_manager: 0.5.3 # classic package:tray_manager/tray_manager.dart API (see 0002-dependency-pins.md)
-  hotkey_manager: 0.2.3 # Linux needs `sudo apt-get install keybinder-3.0` (documented caveat)
-  window_manager: 0.5.2 # frameless always-on-top popup + minimize-to-tray
-  launch_at_startup: 0.5.1 # autostart at login; macOS needs the extra MethodChannel wiring
-
-  # ---- Activity ------------------------------------------------------------
-  flutter_activity_recognition: 4.0.0
-
-  # ---- Voice intercom (record + play the Admin's announcement) --------------
-  record: 7.1.1 # push-to-talk capture; Linux needs parecord/pactl/ffmpeg
-  audioplayers: 6.6.0 # chime + announcement playback
-
-  # ---- Misc ----------------------------------------------------------------
-  qr_flutter: 4.1.0 # pairing QR for the device public key / fingerprint
-  intl: 0.20.3 # must stay compatible with flutter_localizations (^0.20.3 on Flutter 3.47)
-  uuid: 4.6.0
+  # ---- Platform ------------------------------------------------------------
+  permission_handler: 13.0.2 # camera / mic / overlay / notification prompts
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   integration_test:
     sdk: flutter
-
   flutter_lints: 6.0.0
-
-  # ---- Code generation -----------------------------------------------------
-  build_runner: 2.16.1
-  freezed: 4.0.2
-  json_serializable: 6.14.1
-  drift_dev: 2.35.0
-  riverpod_generator: 4.0.9
-
-  # ---- Lints ---------------------------------------------------------------
-  custom_lint: 0.8.1
-  riverpod_lint: 3.1.9
-
-  # ---- Test helpers --------------------------------------------------------
   mocktail: 1.0.5
 
 flutter:
@@ -110,14 +80,15 @@ flutter:
   generate: true # runs `flutter gen-l10n` from l10n.yaml during pub get / build
 
   assets:
-    - assets/models/ # optional .tflite model dir (see assets/models/README.md)
     - assets/images/
-    - assets/tray/ # desktop tray icons, one per visual state (idle/listening/thinking/muted/killed)
-    - assets/audio/ # intercom chime + announcement placeholder audio
+    - assets/brand/
 
-  # Fonts are BUNDLED (no runtime font downloads, works offline, no network fonts).
-  # Both files are variable fonts (fvar axes: Inter -> opsz,wght; JetBrains Mono -> wght);
-  # typography sets FontVariation values so weights render exactly.
+  # Fonts are BUNDLED (no runtime font download, works fully offline, no third-party font
+  # host, no privacy leak). This is why there is no `google_fonts` dependency: the spec
+  # allows either, and a bundled local asset is the stronger choice for an
+  # on-premises/estate product. Both files are variable fonts (Inter -> opsz,wght;
+  # JetBrains Mono -> wght), so typography sets FontVariation values to render exact
+  # weights instead of relying on synthetic emboldening.
   fonts:
     - family: Inter
       fonts:

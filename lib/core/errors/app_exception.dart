@@ -1,289 +1,228 @@
 // Copyright (c) 2026 Md. Moshiur Rahman Mohi / THAMJJ13.TOP. Proprietary. All Rights Reserved.
 
-/// Base type for every error A.R.M.X surfaces to the user.
+import 'package:meta/meta.dart';
+
+/// Every failure the app can surface, as a sealed hierarchy.
 ///
-/// The type hierarchy is *sealed* so that UI code can switch exhaustively and the
-/// analyzer proves that no error case was forgotten.
+/// The layers above the network never see a `DioException`, an HTTP status code or a raw
+/// string: `api_client.dart` maps transport and server failures onto these cases, and the
+/// UI switches on the case to pick a localized message. That is what keeps error copy
+/// translatable and keeps "never fake a success state" enforceable — an unknown outcome
+/// has its own case rather than being reported as success.
+@immutable
 sealed class AppException implements Exception {
-  /// Const constructor for subclasses.
-  const AppException(
-    this.message, {
-    this.cause,
-    this.stackTrace,
-    this.isRetryable = false,
+  /// Creates an exception with a developer-facing message and optional reference id.
+  const AppException({
+    required this.message,
+    this.code,
+    this.requestId,
+    this.statusCode,
   });
 
-  /// Developer-facing English description. Never rendered directly: use
-  /// `core/errors/error_messages.dart` to obtain a localized string.
+  /// Developer-facing description. **Never rendered raw to the user** — the UI maps the
+  /// case onto `l10n.error*` strings, and shows [requestId] only as a support reference.
   final String message;
 
-  /// Underlying error, if any.
-  final Object? cause;
+  /// Stable machine code from the backend (`error.code`) when one was supplied.
+  final String? code;
 
-  /// Stack trace captured at the throw site, if any.
-  final StackTrace? stackTrace;
+  /// Correlation id for support. Safe to display; contains no personal data.
+  final String? requestId;
 
-  /// Whether retrying the same operation may plausibly succeed.
-  final bool isRetryable;
-
-  /// Stable machine-readable code, safe to log and to show in diagnostics.
-  String get code;
-
-  @override
-  String toString() => '$runtimeType($code): $message';
-}
-
-/// Misconfiguration detected at startup (bad `--dart-define`, unreachable pin set, …).
-final class ConfigException extends AppException {
-  /// Creates a configuration error.
-  const ConfigException(super.message, {super.cause, super.stackTrace})
-      : super(isRetryable: false);
-
-  @override
-  String get code => 'config';
-}
-
-/// Transport failure: DNS, TLS, socket, or a refused connection.
-final class NetworkException extends AppException {
-  /// Creates a transport error.
-  const NetworkException(super.message, {super.cause, super.stackTrace})
-      : super(isRetryable: true);
-
-  @override
-  String get code => 'network';
-}
-
-/// The request was accepted but did not complete in the allotted time.
-final class RequestTimeoutException extends AppException {
-  /// Creates a timeout error.
-  const RequestTimeoutException(super.message, {super.cause, super.stackTrace})
-      : super(isRetryable: true);
-
-  @override
-  String get code => 'timeout';
-}
-
-/// The server answered with a non-success status or an unparsable payload.
-final class ApiException extends AppException {
-  /// Creates an API error.
-  const ApiException(
-    super.message, {
-    this.statusCode,
-    this.serverCode,
-    super.cause,
-    super.stackTrace,
-    super.isRetryable,
-  });
-
-  /// HTTP status code when one was received.
+  /// HTTP status, when the failure came from a response.
   final int? statusCode;
 
-  /// Machine-readable error code returned by the backend, when present.
-  final String? serverCode;
-
   @override
-  String get code => serverCode ?? 'api_${statusCode ?? 'unknown'}';
+  String toString() =>
+      '$runtimeType(code: $code, status: $statusCode, requestId: $requestId, $message)';
 }
 
-/// Authentication, pairing and session failures.
-final class AuthException extends AppException {
-  /// Creates an authentication error.
-  const AuthException(this.reason, {super.message, super.cause, super.stackTrace})
-      : super(message ?? 'Authentication failed');
-
-  /// What specifically went wrong.
-  final AuthFailureReason reason;
-
-  @override
-  String get code => 'auth_${reason.name}';
-
-  @override
-  String get message => switch (reason) {
-        AuthFailureReason.invalidCredentials => 'Invalid credentials',
-        AuthFailureReason.accountLocked => 'Account locked',
-        AuthFailureReason.sessionExpired => 'Session expired',
-        AuthFailureReason.refreshRejected => 'Session refresh rejected',
-        AuthFailureReason.pairingRejected => 'Pairing rejected by the server',
-        AuthFailureReason.deviceRevoked => 'This device was revoked',
-        AuthFailureReason.appLockFailed => 'App lock could not be satisfied',
-        AuthFailureReason.biometricUnavailable => 'Biometrics unavailable',
-        AuthFailureReason.serverUrlRejected => 'Server URL rejected',
-      };
+/// No usable connection: DNS failure, refused socket, no route, airplane mode.
+final class NetworkException extends AppException {
+  /// Creates a network failure.
+  const NetworkException({
+    super.message = 'The server could not be reached.',
+    super.code,
+    super.requestId,
+  });
 }
 
-/// Why an authentication attempt failed.
-enum AuthFailureReason {
-  /// Wrong username/password or device key.
-  invalidCredentials,
-
-  /// The account is temporarily locked (too many attempts or an admin action).
-  accountLocked,
-
-  /// The access token expired and no refresh is available.
-  sessionExpired,
-
-  /// The refresh token was rejected; a new login is required.
-  refreshRejected,
-
-  /// The pairing handshake (device key) was refused.
-  pairingRejected,
-
-  /// The device is no longer trusted (revoked by an administrator).
-  deviceRevoked,
-
-  /// `local_auth` reported a failed biometric/PIN prompt.
-  appLockFailed,
-
-  /// No biometric hardware/enrolment on this platform.
-  biometricUnavailable,
-
-  /// The user-supplied server URL is not acceptable (scheme/host).
-  serverUrlRejected,
+/// The connection was established but the exchange took too long.
+final class TimeoutException extends AppException {
+  /// Creates a timeout failure.
+  const TimeoutException({
+    super.message = 'The request timed out.',
+    super.code,
+    super.requestId,
+  });
 }
 
-/// The risk policy refused an action because verification was insufficient or stale.
+/// `401` — the session is missing, expired or rejected. The caller must sign in again.
+final class UnauthorizedException extends AppException {
+  /// Creates an unauthorized failure.
+  const UnauthorizedException({
+    super.message = 'Your session is no longer valid.',
+    super.code,
+    super.statusCode = 401,
+    super.requestId,
+  });
+
+  /// True when the server explicitly said the refresh token is dead, so retrying the
+  /// refresh is pointless.
+  bool get refreshRejected => code == 'refresh_rejected';
+}
+
+/// `403` — authenticated, but the role does not permit the action.
+final class ForbiddenException extends AppException {
+  /// Creates a forbidden failure.
+  const ForbiddenException({
+    super.message = 'Your role does not allow this action.',
+    super.code,
+    super.statusCode = 403,
+    super.requestId,
+  });
+}
+
+/// `404` — the object is gone.
+final class NotFoundException extends AppException {
+  /// Creates a not-found failure.
+  const NotFoundException({
+    super.message = 'The requested item was not found.',
+    super.code,
+    super.statusCode = 404,
+    super.requestId,
+  });
+}
+
+/// `409` — the write conflicts with current server state (already deployed, already
+/// paired, concurrent edit).
+final class ConflictException extends AppException {
+  /// Creates a conflict failure.
+  const ConflictException({
+    super.message = 'The server state changed. Reload and try again.',
+    super.code,
+    super.statusCode = 409,
+    super.requestId,
+  });
+}
+
+/// `422`/`400` with field-level detail.
+final class ValidationException extends AppException {
+  /// Creates a validation failure.
+  const ValidationException({
+    super.message = 'The submitted data was rejected.',
+    this.fieldErrors = const <String, String>{},
+    super.code,
+    super.statusCode = 422,
+    super.requestId,
+  });
+
+  /// Field name → message, as returned by the server.
+  final Map<String, String> fieldErrors;
+}
+
+/// `429` — rate limited. [retryAfter] comes from the `Retry-After` header when present.
+final class RateLimitedException extends AppException {
+  /// Creates a rate-limit failure.
+  const RateLimitedException({
+    super.message = 'Too many attempts. Please wait and try again.',
+    this.retryAfter,
+    super.code = 'rate_limited',
+    super.statusCode = 429,
+    super.requestId,
+  });
+
+  /// How long the client should wait before retrying, when the server said so.
+  final Duration? retryAfter;
+}
+
+/// `5xx` — the server failed. The action did not take effect.
+final class ServerException extends AppException {
+  /// Creates a server failure.
+  const ServerException({
+    super.message = 'The server reported a problem.',
+    super.code,
+    super.statusCode = 500,
+    super.requestId,
+  });
+}
+
+/// The request was rejected by a client-side rule before it was ever sent.
+///
+/// Used for the pre-flight checks the UI must perform — a HIGH-risk action without a
+/// fresh confirmation, a form that has not validated, a feature the current role cannot
+/// reach. Distinct from [ValidationException] because no server round-trip happened.
 final class PolicyException extends AppException {
-  /// Creates a policy error.
+  /// Creates a policy failure.
   const PolicyException({
-    required this.requiredTier,
-    required this.satisfiedTier,
+    required super.message,
     required this.reason,
-  }) : super('Verification does not satisfy the required risk tier');
+    super.code = 'policy_rejected',
+  });
 
-  /// Tier demanded by the action.
-  final String requiredTier;
-
-  /// Tier actually satisfied by the presented evidence.
-  final String satisfiedTier;
-
-  /// Why the evidence was rejected.
+  /// A machine-readable reason, e.g. `high_risk_not_confirmed`.
   final String reason;
-
-  @override
-  String get code => 'policy_insufficient_verification';
 }
 
-/// A verification prompt (face / voice / biometric) failed or was cancelled.
-final class VerificationException extends AppException {
-  /// Creates a verification error.
-  const VerificationException(this.reason, {super.message, super.cause, super.stackTrace})
-      : super(message ?? 'Verification failed');
+/// A required capability is missing: no camera, no microphone, no overlay permission, an
+/// unsupported platform. The UI renders an explanatory state instead of a crash.
+final class CapabilityException extends AppException {
+  /// Creates a capability failure.
+  const CapabilityException({
+    required super.message,
+    required this.capability,
+    super.code = 'capability_missing',
+  });
 
-  /// What failed.
-  final VerificationFailureReason reason;
-
-  @override
-  String get code => 'verification_${reason.name}';
-
-  @override
-  String get message => switch (reason) {
-        VerificationFailureReason.noFaceDetected => 'No face detected',
-        VerificationFailureReason.multipleFaces => 'More than one face detected',
-        VerificationFailureReason.lowMatchScore => 'Face did not match the enrolled template',
-        VerificationFailureReason.livenessFailed => 'Liveness challenge not completed',
-        VerificationFailureReason.noTemplateEnrolled => 'No face template enrolled yet',
-        VerificationFailureReason.voiceNotHeard => 'Voice sample not recognised',
-        VerificationFailureReason.voiceTooShort => 'Voice sample too short',
-        VerificationFailureReason.userCancelled => 'Verification cancelled',
-        VerificationFailureReason.hardwareUnavailable => 'Camera or microphone unavailable',
-      };
+  /// The missing capability, e.g. `camera`, `microphone`, `system_alert_window`.
+  final String capability;
 }
 
-/// Why a verification attempt failed.
-enum VerificationFailureReason {
-  /// No face in frame.
-  noFaceDetected,
-
-  /// More than one face in frame (spoofing attempt or a bystander).
-  multipleFaces,
-
-  /// Cosine similarity below the configured threshold.
-  lowMatchScore,
-
-  /// The user did not complete the blink / head-turn challenge.
-  livenessFailed,
-
-  /// Nothing enrolled to match against.
-  noTemplateEnrolled,
-
-  /// Wake/speech recognition did not match the enrolled voice profile.
-  voiceNotHeard,
-
-  /// Sample shorter than the minimum duration.
-  voiceTooShort,
-
-  /// The user dismissed the prompt.
-  userCancelled,
-
-  /// No camera/microphone or permission denied.
-  hardwareUnavailable,
-}
-
-/// Secure storage / local database failure.
+/// Local persistence failed (secure storage unavailable, disk full, corrupted blob).
 final class StorageException extends AppException {
-  /// Creates a storage error.
-  const StorageException(super.message, {super.cause, super.stackTrace})
-      : super(isRetryable: true);
-
-  @override
-  String get code => 'storage';
+  /// Creates a storage failure.
+  const StorageException({
+    super.message = 'Local storage is unavailable.',
+    super.code = 'storage_failed',
+  });
 }
 
-/// A permission (camera, microphone, activity, location, notifications) was denied.
-final class PermissionDeniedException extends AppException {
-  /// Creates a permission error.
-  const PermissionDeniedException(this.permission, {this.permanentlyDenied = false})
-      : super('Permission denied');
-
-  /// Platform permission name, for example `camera`.
-  final String permission;
-
-  /// True when the OS will no longer show the rationale dialog.
-  final bool permanentlyDenied;
-
-  @override
-  String get code => 'permission_denied_$permission';
-
-  @override
-  String get message => 'Permission "$permission" denied';
+/// The response was understood as a status but its body did not match the contract.
+///
+/// This is deliberately its own case: a malformed 200 is **not** a success, and the UI
+/// must show the error state rather than an empty screen.
+final class MalformedResponseException extends AppException {
+  /// Creates a malformed-response failure.
+  const MalformedResponseException({
+    super.message = 'The server response did not match the expected format.',
+    super.code = 'malformed_response',
+    super.statusCode,
+    super.requestId,
+  });
 }
 
-/// The requested capability does not exist on this platform (for example ML Kit on Linux).
-final class PlatformUnsupportedException extends AppException {
-  /// Creates an unsupported-platform error.
-  const PlatformUnsupportedException(this.feature, {this.platformName})
-      : super('Feature not supported on this platform');
-
-  /// Feature identifier, for example `face_detection`.
-  final String feature;
-
-  /// Platform that was probed, for example `linux`.
-  final String? platformName;
-
-  @override
-  String get code => 'unsupported_$feature';
-
-  @override
-  String get message => 'Feature "$feature" is not supported'
-      '${platformName == null ? '' : ' on $platformName'}';
+/// The user dismissed a prompt, closed a sheet or cancelled a request.
+///
+/// Cancellation is not a failure. Controllers swallow this case instead of rendering an
+/// error, which is why it is modelled explicitly rather than as a `null` return.
+final class CancelledException extends AppException {
+  /// Creates a cancellation marker.
+  const CancelledException({super.message = 'Cancelled by the user.'});
 }
 
-/// The WebSocket session dropped and is currently reconnecting.
-final class TransportClosedException extends AppException {
-  /// Creates a transport-closed error.
-  const TransportClosedException([super.message = 'Realtime connection closed'])
-      : super(isRetryable: true);
-
-  @override
-  String get code => 'transport_closed';
-}
-
-/// The global kill-switch is engaged; privileged actions are blocked.
-final class KillSwitchActiveException extends AppException {
-  /// Creates a kill-switch error.
-  const KillSwitchActiveException()
-      : super('KILL-SWITCH is engaged: the assistant is disabled');
-
-  @override
-  String get code => 'kill_switch_active';
+/// Anything that did not match a known case — an unmapped status code, a transport
+/// failure with no `DioExceptionType`, a bug in a mapper.
+///
+/// It exists so that "unrecognised" is an explicit, renderable state instead of a
+/// `null`/`false`/empty-list that the UI would draw as an empty success. The sealed base
+/// class cannot be instantiated directly, which is what forces every mapper to name a
+/// concrete outcome.
+final class UnknownException extends AppException {
+  /// Creates an unrecognised failure.
+  const UnknownException({
+    required super.message,
+    super.code,
+    super.statusCode,
+    super.requestId,
+  });
 }
