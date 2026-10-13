@@ -26,6 +26,18 @@ abstract final class ConfirmPolicy {
   /// Whether [tier] requires a dialog at all.
   static bool requiresDialog(RiskTier tier) => tier.requiresConfirmation;
 
+  /// Whether [action] must be confirmed by typing a phrase, not merely by tapping.
+  ///
+  /// Reserved for the actions that end access or change the world outside the app: publishing
+  /// a site, stopping the assistant everywhere, signing every other device out, and unlocking
+  /// a door. A tap is too cheap for those; a phrase is not.
+  static bool requiresTypedPhrase(String action) =>
+      _typedPhraseTools.contains(action);
+
+  /// Whether [action] cannot be undone.
+  static bool isIrreversible(String action) =>
+      _irreversibleTools.contains(action);
+
   /// Shows the confirmation for [request] and reports the user's decision.
   ///
   /// Returns `true` for a LOW-risk request without rendering anything. For a dismissed or

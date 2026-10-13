@@ -70,6 +70,13 @@ def rel(path: str) -> str:
     return os.path.relpath(path, ROOT).replace(os.sep, "/")
 
 
+def usage_files():
+    """Every file whose *use* of the API is checked: the library and its tests."""
+    for base in (LIB, os.path.join(ROOT, "test"), os.path.join(ROOT, "integration_test")):
+        if os.path.isdir(base):
+            yield from iter_files(base, (".dart",))
+
+
 def iter_files(base: str, suffixes: tuple[str, ...] | None = None):
     for dirpath, dirnames, filenames in os.walk(base):
         dirnames[:] = [
@@ -402,7 +409,7 @@ def check_static_references() -> None:
         for name in checked
     }
 
-    for path in iter_files(LIB, (".dart",)):
+    for path in usage_files():
         relative = rel(path)
         source = stripped(path)
         for name, pattern in patterns.items():
@@ -430,7 +437,7 @@ def check_provider_names() -> None:
     """
     declared = _project_symbols()
     pattern = re.compile(r"(?<![\w.\$])([a-z][A-Za-z0-9]*Provider)\b(?!\s*[:=])")
-    for path in iter_files(LIB, (".dart",)):
+    for path in usage_files():
         relative = rel(path)
         source = stripped(path)
         body_start = 0
@@ -786,6 +793,51 @@ def _model_typed_variables(source: str, model_names: set[str]) -> dict[str, set[
     return bindings
 
 
+def _collection_typed_variables(source: str, model_names: set[str]) -> dict[str, set[str]]:
+    """Names bound to a `List<Model>` / `Set<Model>`, e.g. `final List<ArmxDevice> devices`.
+
+    Used to type the parameter of `devices.where((device) => …)` so the body can be checked.
+    Without this, a lambda parameter shares a name with unrelated code in the same file often
+    enough that the check would either miss real errors or report false ones.
+    """
+    bindings: dict[str, set[str]] = {}
+    for model in model_names:
+        pattern = re.compile(
+            r"\b(?:List|Set|Iterable)<" + re.escape(model) + r">\s+([a-z_][A-Za-z0-9_]*)\b"
+        )
+        for match in pattern.finditer(source):
+            bindings.setdefault(match.group(1), set()).add(model)
+    return bindings
+
+
+def _lambda_parameter_bindings(
+    source: str, collections: dict[str, set[str]]
+) -> dict[str, set[str]]:
+    """Types the parameter of a collection callback, so its body can be checked.
+
+    `alarms.firstWhere((alarm) => alarm.isRingng)` is checked because `alarms` is a
+    `List<ArmxAlarm>`; the parameter inherits the element type.
+    """
+    bindings: dict[str, set[str]] = {}
+    calls = (
+        "firstWhere", "lastWhere", "singleWhere", "where", "whereType", "any", "every",
+        "map", "forEach", "reduce", "fold", "expand", "indexWhere", "takeWhile",
+        "skipWhile", "sort", "removeWhere",
+    )
+    for collection, models in collections.items():
+        pattern = re.compile(
+            r"\b"
+            + re.escape(collection)
+            + r"\.(?:"
+            + "|".join(calls)
+            + r")\(\s*\(\s*([a-z_][A-Za-z0-9_]*)\s*[,)]"
+        )
+        for match in pattern.finditer(source):
+            parameter = match.group(1)
+            bindings.setdefault(parameter, set()).update(models)
+    return bindings
+
+
 def _names_the_type(identifier: str, type_name: str) -> bool:
     """Whether `identifier` reads as a variable holding `type_name`.
 
@@ -836,7 +888,7 @@ def check_api_surface() -> None:
     all_enums = _all_enum_members()
     model_names = set(models)
 
-    for path in iter_files(LIB, (".dart",)):
+    for path in usage_files():
         relative = rel(path)
         scanned = stripped(path)
 
@@ -883,6 +935,11 @@ def check_api_surface() -> None:
         # ---- unknown model members ---------------------------------------
         if model_names:
             candidates = _model_typed_variables(scanned, model_names)
+            collections = _collection_typed_variables(scanned, model_names)
+            for parameter, inferred in _lambda_parameter_bindings(
+                scanned, collections
+            ).items():
+                candidates.setdefault(parameter, set()).update(inferred)
             for variable, possible in candidates.items():
                 allowed: set[str] = set()
                 for model in possible:
@@ -923,6 +980,18 @@ def check_self_test() -> None:
     )
     if body.strip() != "a,\n  b,":
         errors.append(f"self-test: brace span parsed as {body!r}")
+
+    lambda_types = _lambda_parameter_bindings(
+        "final List<ArmxDevice> devices = <ArmxDevice>[];\n"
+        "final Iterable<ArmxDevice> lit = devices.where((device) => device.online);\n",
+        _collection_typed_variables(
+            "final List<ArmxDevice> devices = <ArmxDevice>[];", {"ArmxDevice"}
+        ),
+    )
+    if lambda_types.get("device") != {"ArmxDevice"}:
+        errors.append(
+            f"self-test: lambda parameter typed as {sorted(lambda_types.get('device', []))}"
+        )
 
     members = _model_members(
         "class M {\n  const M({this.name});\n  final String name;\n"
