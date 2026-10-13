@@ -1,309 +1,220 @@
 // Copyright (c) 2026 Md. Moshiur Rahman Mohi / THAMJJ13.TOP. Proprietary. All Rights Reserved.
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:riverpod_annotation/riverpod_annotation.dart';
 
-import '../../features/auth/lock/app_lock_controller.dart';
-import '../../features/auth/lock/lock_page.dart';
-import '../../features/auth/login/login_page.dart';
-import '../../features/auth/pairing/pairing_controller.dart';
-import '../../features/auth/pairing/pairing_page.dart';
-import '../../features/auth/session/auth_controller.dart';
-import '../../features/bootstrap/bootstrap_gate.dart';
-import '../../features/chat/chat_page.dart';
-import '../../features/common/placeholder_page.dart';
-import '../../features/desktop/popup/desktop_popup_page.dart';
-import '../../features/desktop/widgets/background_readiness_page.dart';
-import '../../features/intercom/admin_talk_page.dart';
-import '../../features/intercom/intercom_activity_page.dart';
-import '../../features/dev/design_system_page.dart';
-import '../../features/settings/about_page.dart';
-import '../../features/settings/diagnostics_page.dart';
-import '../../features/settings/settings_page.dart';
-import '../../features/shell/app_shell.dart';
-import '../../features/voice/voice_page.dart';
+import '../../features/auth/application/auth_controller.dart';
+import '../../features/auth/data/auth_models.dart';
+import '../../features/auth/presentation/forgot_password_page.dart';
+import '../../features/auth/presentation/login_page.dart';
+import '../../features/auth/presentation/reset_password_page.dart';
+import '../../features/auth/presentation/signup_page.dart';
+import '../../features/auth/presentation/verify_email_page.dart';
+import '../../features/shell/presentation/app_shell.dart';
+import '../../features/splash/presentation/splash_page.dart';
+import '../errors/app_exception.dart';
+import '../l10n/l10n.dart';
 import 'routes.dart';
+import 'screen_registry.dart';
 
-part 'app_router.g.dart';
-
-/// Builds the app router.
+/// Builds the app router, including the guards.
 ///
-/// The five primary tabs live inside a `StatefulShellRoute.indexedStack` so each keeps its
-/// own state; everything else (login, pairing, lock, vision, unlock, settings and the dev
-/// gallery) is pushed on top of the shell.
+/// ## Guarding rules
 ///
-/// Step-2 gating (redirect, evaluated on every navigation and re-evaluated whenever the
-/// pairing, auth or app-lock controllers change):
+/// 1. **Splash** owns the launch; the redirect never pulls it away mid-restore.
+/// 2. **Signed out** → [Routes.login], remembering where the user was headed so sign-in
+///    lands them there.
+/// 3. **Unverified** → [Routes.verifyEmail]. An unverified account is *not* signed in and
+///    cannot reach the assistant.
+/// 4. **Role** → a route declaring `minimumRole` past the user's role redirects to
+///    [Routes.home]. Unauthorised access is a **redirect, not a hidden button**: typing
+///    `/admin` as a regular user must not render the dashboard for a frame.
+/// 5. The reset-password route stays reachable while signed out — it is reached from an
+///    email, so it cannot require a session.
 ///
-/// 1. splash / `AuthPhase.restoring` — untouched; the bootstrap gate owns the launch.
-/// 2. not paired — always [AppRoutes.pairing] (pending and rejected live there too).
-/// 3. paired + signed out (or `sessionExpired`) — [AppRoutes.login], capturing the
-///    current location as the pending intent so the next sign-in lands where the user
-///    was headed.
-/// 4. paired + signed in + `lockDue` — [AppRoutes.lock], likewise capturing intent for
-///    the post-unlock redirect.
-/// 5. otherwise — the requested route (step-1 routes keep working unchanged).
-@Riverpod(keepAlive: true)
-GoRouter appRouter(Ref ref) {
-  final router = GoRouter(
-    initialLocation: AppRoutes.splash,
+/// The router itself performs no I/O; it reads session state that [AuthController] has
+/// already resolved.
+final Provider<GoRouter> appRouterProvider = Provider<GoRouter>((Ref ref) {
+  final GoRouter router = GoRouter(
+    initialLocation: Routes.splash,
     debugLogDiagnostics: false,
-    redirect: (context, state) {
-      final location = state.matchedLocation;
+    redirect: (BuildContext context, GoRouterState state) {
+      final String location = state.matchedLocation;
+      final AuthState auth = ref.read(authControllerProvider);
 
-      // The splash runs the bootstrap sequence; never pull it away mid-restore.
-      if (location == AppRoutes.splash) {
+      // 1. The splash runs the bootstrap; never interrupt it.
+      if (location == Routes.splash) {
         return null;
       }
 
-      final auth = ref.read(authControllerProvider);
-      if (auth.phase == AuthPhase.restoring) {
-        return null;
+      // Routes that must stay reachable with no session, because the user arrives from a
+      // link rather than from inside the app.
+      const Set<String> publicRoutes = <String>{
+        Routes.login,
+        Routes.signup,
+        Routes.forgotPassword,
+        Routes.resetPassword,
+      };
+
+      // 2. Restoring: hold the user on the splash rather than flashing sign-in.
+      if (auth.isRestoring) {
+        return Routes.splash;
       }
 
-      // Gate 1: pairing. Approved is the only state that leaves the screen;
-      // pending and rejected stay there by design (their retry UIs live on it).
-      final pairing = ref.read(pairingControllerProvider);
-      if (!pairing.paired) {
-        return location == AppRoutes.pairing ? null : AppRoutes.pairing;
+      final bool signedIn = auth.isSignedIn;
+
+      // 3. Unverified accounts are held on the verification screen.
+      if (auth.phase == AuthPhase.awaitingEmailVerification) {
+        return location == Routes.verifyEmail ? null : Routes.verifyEmail;
       }
 
-      // Gate 2: session. `sessionExpired` is a signed-out state that still
-      // carries the localized "your session expired" notice into login.
-      if (auth.phase == AuthPhase.signedOut ||
-          auth.phase == AuthPhase.sessionExpired) {
-        if (location == AppRoutes.login) {
+      if (!signedIn) {
+        if (publicRoutes.contains(location)) {
           return null;
         }
-        // Preserve the interrupted navigation across the login round-trip
-        // (the lock route re-enters through the normal rule below instead).
-        if (location != AppRoutes.lock) {
-          ref.read(authControllerProvider.notifier).setPendingIntent(location);
+        // Remember the intent so the post-sign-in redirect is where they wanted to go.
+        final String? from = state.uri.toString();
+        if (from.isNotEmpty && from != Routes.login) {
+          return Uri(
+            path: Routes.login,
+            queryParameters: <String, String>{'next': from},
+          ).toString();
         }
-        return AppRoutes.login;
+        return Routes.login;
       }
 
-      // Gate 3: LOW-tier app lock (see AppLockController for the tier note).
-      final lock = ref.read(appLockControllerProvider);
-      if (lock.lockDue && location != AppRoutes.lock) {
-        ref.read(authControllerProvider.notifier).setPendingIntent(location);
-        return AppRoutes.lock;
+      // A signed-in user has no business on the auth screens.
+      if (publicRoutes.contains(location)) {
+        final String? next = state.uri.queryParameters['next'];
+        return next != null && next.isNotEmpty ? next : Routes.home;
+      }
+
+      // 4. Role guard. `ScreenSpec.minimumRole` is the single source of truth for which
+      // role a screen needs, so navigation and the guard can never disagree.
+      final ScreenSpec? spec = ScreenRegistry.match(location);
+      if (spec != null && !auth.role.satisfies(spec.minimumRole)) {
+        return Routes.home;
       }
 
       return null;
     },
     routes: <RouteBase>[
       GoRoute(
-        path: AppRoutes.splash,
-        name: 'splash',
-        builder: (context, state) => const BootstrapGate(),
+        path: Routes.splash,
+        name: Routes.nameOf(Routes.splash),
+        builder: (BuildContext context, GoRouterState state) => const SplashPage(),
       ),
       GoRoute(
-        path: AppRoutes.login,
-        name: 'login',
-        builder: (context, state) => const LoginPage(),
+        path: Routes.login,
+        name: Routes.nameOf(Routes.login),
+        builder: (BuildContext context, GoRouterState state) => const LoginPage(),
       ),
       GoRoute(
-        path: AppRoutes.pairing,
-        name: 'pairing',
-        builder: (context, state) => const PairingPage(),
+        path: Routes.signup,
+        name: Routes.nameOf(Routes.signup),
+        builder: (BuildContext context, GoRouterState state) => const SignupPage(),
       ),
       GoRoute(
-        path: AppRoutes.lock,
-        name: 'lock',
-        builder: (context, state) => const LockPage(),
+        path: Routes.forgotPassword,
+        name: Routes.nameOf(Routes.forgotPassword),
+        builder: (BuildContext context, GoRouterState state) =>
+            const ForgotPasswordPage(),
       ),
+      GoRoute(
+        path: Routes.resetPassword,
+        name: Routes.nameOf(Routes.resetPassword),
+        builder: (BuildContext context, GoRouterState state) => ResetPasswordPage(
+          // The token may arrive as a query parameter (web) or a path fragment (a deep
+          // link that was rewritten); both are accepted, and its absence is a state the
+          // screen renders rather than a crash.
+          token: state.uri.queryParameters['token'] ?? state.pathParameters['token'],
+        ),
+      ),
+      GoRoute(
+        path: Routes.verifyEmail,
+        name: Routes.nameOf(Routes.verifyEmail),
+        builder: (BuildContext context, GoRouterState state) => VerifyEmailPage(
+          email: state.uri.queryParameters['email'],
+          token: state.uri.queryParameters['token'],
+        ),
+      ),
+
+      // ---- The shell: every destination keeps its own state ------------------
       StatefulShellRoute.indexedStack(
-        builder: (context, state, navigationShell) =>
+        builder: (
+          BuildContext context,
+          GoRouterState state,
+          StatefulNavigationShell navigationShell,
+        ) =>
             AppShell(navigationShell: navigationShell),
         branches: <StatefulShellBranch>[
-          StatefulShellBranch(
-            routes: <RouteBase>[
-              GoRoute(
-                path: AppRoutes.dashboard,
-                name: 'dashboard',
-                builder: (context, state) => const PlaceholderPage(
-                  title: 'Dashboard',
-                  step: 5,
-                  icon: Icons.dashboard_rounded,
+          for (final ScreenSpec spec in ScreenRegistry.shellScreens)
+            StatefulShellBranch(
+              routes: <RouteBase>[
+                GoRoute(
+                  path: spec.path,
+                  name: Routes.nameOf(spec.path),
+                  builder: spec.builder,
+                  routes: <RouteBase>[
+                    for (final ScreenSpec child in spec.children)
+                      GoRoute(
+                        path: child.relativePath,
+                        name: Routes.nameOf(child.path),
+                        builder: child.builder,
+                      ),
+                  ],
                 ),
-              ),
-            ],
-          ),
-          StatefulShellBranch(
-            routes: <RouteBase>[
-              GoRoute(
-                path: AppRoutes.chat,
-                name: 'chat',
-                builder: (context, state) => const ChatPage(),
-              ),
-            ],
-          ),
-          StatefulShellBranch(
-            routes: <RouteBase>[
-              GoRoute(
-                path: AppRoutes.devices,
-                name: 'devices',
-                builder: (context, state) => const PlaceholderPage(
-                  title: 'Devices',
-                  step: 5,
-                  icon: Icons.memory_rounded,
-                ),
-              ),
-            ],
-          ),
-          StatefulShellBranch(
-            routes: <RouteBase>[
-              GoRoute(
-                path: AppRoutes.activity,
-                name: 'activity',
-                builder: (context, state) => const PlaceholderPage(
-                  title: 'Activity & rules',
-                  step: 8,
-                  icon: Icons.directions_walk_rounded,
-                ),
-              ),
-            ],
-          ),
-          StatefulShellBranch(
-            routes: <RouteBase>[
-              GoRoute(
-                path: AppRoutes.admin,
-                name: 'admin',
-                builder: (context, state) => const PlaceholderPage(
-                  title: 'Admin',
-                  step: 6,
-                  icon: Icons.admin_panel_settings_rounded,
-                ),
-              ),
-            ],
-          ),
+              ],
+            ),
         ],
       ),
-      GoRoute(
-        path: AppRoutes.desktopPopup,
-        name: 'desktopPopup',
-        builder: (context, state) => const DesktopPopupPage(),
-      ),
-      GoRoute(
-        path: AppRoutes.vision,
-        name: 'vision',
-        builder: (context, state) => const PlaceholderPage(
-          title: 'Vision',
-          step: 7,
-          icon: Icons.visibility_rounded,
+
+      // ---- Pushed screens (settings, about, diagnostics) --------------------
+      for (final ScreenSpec spec in ScreenRegistry.pushedScreens)
+        GoRoute(
+          path: spec.path,
+          name: Routes.nameOf(spec.path),
+          builder: spec.builder,
         ),
-      ),
-      GoRoute(
-        path: AppRoutes.unlock,
-        name: 'unlock',
-        builder: (context, state) => const PlaceholderPage(
-          title: 'Unlock',
-          step: 9,
-          icon: Icons.lock_open_rounded,
-        ),
-      ),
-      GoRoute(
-        path: AppRoutes.settings,
-        name: 'settings',
-        builder: (context, state) => const SettingsPage(),
-        routes: <RouteBase>[
-          GoRoute(
-            path: 'about',
-            name: 'about',
-            builder: (context, state) => const AboutPage(),
-          ),
-          GoRoute(
-            path: 'diagnostics',
-            name: 'diagnostics',
-            builder: (context, state) => const DiagnosticsPage(),
-          ),
-          GoRoute(
-            path: 'design-system',
-            name: 'designSystem',
-            builder: (context, state) => const DesignSystemPage(),
-          ),
-          GoRoute(
-            path: 'desktop-readiness',
-            name: 'desktopReadiness',
-            builder: (context, state) => const BackgroundReadinessPage(),
-          ),
-          GoRoute(
-            path: 'voice',
-            name: 'voice',
-            builder: (context, state) => const VoicePage(),
-          ),
-          GoRoute(
-            path: 'talk',
-            name: 'intercomTalk',
-            builder: (context, state) => const AdminTalkPage(),
-          ),
-          GoRoute(
-            path: 'intercom-activity',
-            name: 'intercomActivity',
-            builder: (context, state) => const IntercomActivityPage(),
-          ),
-        ],
-      ),
     ],
-    errorBuilder: (context, state) => AppRouteErrorPage(message: state.error?.toString()),
+    errorBuilder: (BuildContext context, GoRouterState state) =>
+        RouteErrorPage(message: state.error?.toString()),
   );
 
-  // The redirect above reads plain Riverpod state, so every change to those
-  // controllers must re-evaluate it (go_router only re-runs redirects on
-  // navigation or refresh).
-  ref.listen<PairingFlowState>(
-    pairingControllerProvider,
-    (previous, next) => router.refresh(),
-  );
-  ref.listen<AuthState>(
-    authControllerProvider,
-    (previous, next) => router.refresh(),
-  );
-  ref.listen<AppLockState>(
-    appLockControllerProvider,
-    (previous, next) => router.refresh(),
-  );
+  // go_router re-evaluates `redirect` on navigation, so every change to the session must
+  // refresh it — otherwise signing out would leave the shell rendered until the next tap.
+  ref.listen<AuthState>(authControllerProvider, (AuthState? previous, AuthState next) {
+    if (previous?.phase != next.phase || previous?.role != next.role) {
+      router.refresh();
+    }
+  });
+
+  ref.onDispose(router.dispose);
   return router;
-}
+});
 
-/// Fallback screen for an unknown or malformed route.
-class AppRouteErrorPage extends StatelessWidget {
-  /// Creates the error page.
-  const AppRouteErrorPage({this.message, super.key});
+/// Shown for an unknown route or a malformed deep link.
+///
+/// Renders the same error chrome as the rest of the app, with a labelled, focusable escape
+/// hatch instead of a bare string.
+class RouteErrorPage extends StatelessWidget {
+  /// Creates the page.
+  const RouteErrorPage({this.message, super.key});
 
-  /// Diagnostic message from go_router.
+  /// Diagnostic detail from go_router.
   final String? message;
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('A.R.M.X')),
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              const Icon(Icons.explore_off_outlined, size: 44),
-              const SizedBox(height: 12),
-              const Text('This route does not exist.'),
-              if (message != null) ...<Widget>[
-                const SizedBox(height: 8),
-                Text(
-                  message!,
-                  textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
-              ],
-              const SizedBox(height: 18),
-              FilledButton(
-                onPressed: () => context.go(AppRoutes.dashboard),
-                child: const Text('Go to dashboard'),
-              ),
-            ],
+      body: SafeArea(
+        child: ArmxErrorState(
+          error: UnknownException(
+            message: message ?? 'No route matched this address.',
+            code: 'route_not_found',
           ),
+          onRetry: () => GoRouter.of(context).go(Routes.home),
         ),
       ),
     );

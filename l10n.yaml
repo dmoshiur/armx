@@ -5,10 +5,14 @@
 #
 # Output lands in lib/l10n/generated/app_localizations*.dart, which is NOT committed: run
 # `flutter pub get` (or `flutter gen-l10n`) once before analyzing.
+#
+# `nullable-getter: false` makes `AppLocalizations.of(context)` non-nullable, so a missing
+# localization delegate is a compile error rather than a runtime fallback to English.
 
 arb-dir: lib/l10n
 template-arb-file: app_en.arb
 output-localization-file: app_localizations.dart
 output-class: AppLocalizations
 output-dir: lib/l10n/generated
+nullable-getter: false
 untranslated-messages-file: l10n_untranslated.json

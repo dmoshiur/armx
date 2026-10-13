@@ -1,525 +1,966 @@
 {
-  "@@locale": "en",
-  "@@last_modified": "2026-09-30T00:00:00.000Z",
-  "appTitle": "A.R.M.X AI",
+  "appName": "A.R.M.X AI",
+  "@appName": {
+    "description": "Product name. Never translated."
+  },
+  "appWordmark": "A.R.M.X",
+  "@appWordmark": {
+    "description": "Wordmark without the AI suffix."
+  },
   "appTagline": "Automated Resource Management eXtension",
+  "appShortTagline": "Your estate, listening.",
+  "brandOwner": "Md. Moshiur Rahman Mohi",
+  "@brandOwner": {
+    "description": "Owner name. Never translated."
+  },
+  "brandName": "THAMJJ13.TOP",
+  "@brandName": {
+    "description": "Brand name. Never translated."
+  },
   "commonRetry": "Retry",
   "commonCancel": "Cancel",
+  "commonConfirm": "Confirm",
   "commonOk": "OK",
   "commonClose": "Close",
   "commonSave": "Save",
+  "commonSaveChanges": "Save changes",
   "commonDelete": "Delete",
+  "commonEdit": "Edit",
+  "commonCreate": "Create",
+  "commonAdd": "Add",
+  "commonRemove": "Remove",
   "commonBack": "Back",
   "commonNext": "Next",
+  "commonPrevious": "Previous",
   "commonDone": "Done",
+  "commonContinue": "Continue",
+  "commonFinish": "Finish",
   "commonLoading": "Loading…",
-  "commonError": "Something went wrong",
-  "commonEmpty": "Nothing here yet",
   "commonSearch": "Search",
+  "commonFilter": "Filter",
   "commonRefresh": "Refresh",
-  "commonCopy": "Copy",
-  "commonCopied": "Copied to clipboard",
-  "commonExport": "Export",
-  "commonReset": "Reset",
   "commonApply": "Apply",
-  "commonEnable": "Enable",
-  "commonDisable": "Disable",
-  "commonConfirm": "Confirm",
-  "commonDismiss": "Dismiss",
-  "commonApprove": "Approve",
-  "commonDeny": "Deny",
+  "commonReset": "Reset",
   "commonYes": "Yes",
   "commonNo": "No",
-  "commonOnline": "Online",
-  "commonOffline": "Offline",
+  "commonCopy": "Copy",
+  "commonCopied": "Copied to clipboard",
+  "commonMore": "More",
+  "commonAll": "All",
+  "commonNone": "None",
+  "commonEnabled": "Enabled",
+  "commonDisabled": "Disabled",
+  "commonOn": "On",
+  "commonOff": "Off",
+  "commonOpen": "Open",
+  "commonShow": "Show",
+  "commonHide": "Hide",
+  "commonLearnMore": "Learn more",
+  "commonRequired": "Required",
+  "commonOptional": "Optional",
+  "commonRecommended": "Recommended",
   "commonUnknown": "Unknown",
-  "commonMoreOptions": "More options",
-  "commonSecondsShort": "{count}s",
-  "@commonSecondsShort": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
-  "navDashboard": "Dashboard",
-  "navChat": "Chat",
-  "navDevices": "Devices",
-  "navActivity": "Activity",
+  "commonNotAvailable": "Not available",
+  "commonSimulated": "Simulated",
+  "commonPending": "Pending",
+  "navDashboard": "Home",
+  "navAssistant": "Assistant",
+  "navSmartHome": "Smart home",
+  "navAlarms": "Alarms",
+  "navLinkedDevices": "Linked devices",
+  "navGuestGreeter": "Guest greeter",
+  "navWebBuilder": "Web builder",
+  "navMessaging": "Messaging",
   "navAdmin": "Admin",
   "navSettings": "Settings",
-  "navVision": "Vision",
-  "navUnlock": "Unlock",
-  "chatTitle": "Assistant",
-  "chatStreaming": "Replying…",
-  "chatStatusLive": "Live",
-  "chatStatusReconnecting": "Reconnecting…",
-  "chatStatusOffline": "Offline",
-  "chatEmptyTitle": "Ask A.R.M.X anything",
-  "chatEmptyBody": "The assistant can switch devices, show the audit trail and prepare unlocks. Higher-risk actions ask for your approval first.",
-  "chatComposerHint": "Message A.R.M.X…",
-  "chatSend": "Send",
-  "chatClear": "Clear chat",
-  "chatVerificationNeeded": "This action needs verification before it can run.",
-  "chatVerifying": "Verifying…",
-  "chatToolRunning": "Running…",
-  "chatToolSucceeded": "Completed",
-  "chatToolFailed": "Failed",
-  "chatToolDenied": "Denied by you",
-  "chatToolExpired": "Expired",
-  "chatToolParameters": "Parameters",
-  "chatBlocked": "This reply was blocked by policy.",
-  "chatSuggestionLight": "Turn on the living room lights",
-  "chatSuggestionAudit": "Summarise the last 24 hours",
-  "chatSuggestionUnlock": "Unlock my studio PC",
-  "chatSuggestionKill": "Switch off everything",
-  "themeTitle": "Theme",
-  "themeSystem": "System",
-  "themeLight": "Light",
-  "themeDark": "Dark",
-  "languageTitle": "Language",
-  "languageSystem": "System default",
-  "languageEnglish": "English",
-  "languageBengali": "বাংলা",
-  "aboutTitle": "About",
-  "aboutVersion": "Version {version}",
-  "@aboutVersion": {
+  "navMore": "More",
+  "navOpenMenu": "Open navigation menu",
+  "navCollapseRail": "Collapse navigation",
+  "navExpandRail": "Expand navigation",
+  "shellLogout": "Sign out",
+  "shellLogoutConfirmTitle": "Sign out of A.R.M.X?",
+  "shellLogoutConfirmBody": "The assistant stops listening on this device until you sign in again.",
+  "shellSignedInAs": "Signed in as {email}",
+  "@shellSignedInAs": {
     "placeholders": {
-      "version": {
-        "type": "String"
+      "email": {
+        "type": "String",
+        "example": "mohi@thamjj13.top"
       }
     }
   },
-  "aboutOwner": "Owner",
-  "aboutBrand": "Brand",
-  "aboutLicenses": "Open-source licences",
-  "aboutPrivacy": "Privacy",
-  "aboutDiagnostics": "Diagnostics",
-  "splashInitialising": "Initialising secure environment…",
-  "splashTaglineShort": "Secure local control for your devices",
-  "errorConfigTitle": "Configuration problem",
-  "errorConfigBody": "This build is misconfigured and cannot start. Please reinstall or contact the administrator.",
-  "errorNetworkTitle": "Cannot reach the server",
-  "errorNetworkBody": "Check your connection and the server address, then try again.",
-  "errorTimeoutTitle": "The server took too long",
-  "errorTimeoutBody": "The request timed out. Try again in a moment.",
-  "errorAuthTitle": "Session problem",
-  "errorAuthBody": "Please sign in again to continue.",
-  "errorAuthAccountLockedBody": "This account is locked after too many failed attempts. Wait a moment and try again, or ask the owner to unlock it.",
-  "pairingTitle": "Device pairing",
-  "pairingSubtitle": "Connect to your A.R.M.X server, then register this phone.",
-  "pairingServerSection": "Server connection",
-  "pairingServerUrlLabel": "Server URL",
-  "pairingServerUrlHint": "https://home.example.com",
-  "pairingTestConnection": "Test connection",
-  "pairingInsecureUrlWarning": "Debug build: plain http is allowed here, but traffic is not encrypted.",
-  "pairingServerConnected": "Connected · {version}",
-  "pairingIdentitySection": "Device identity",
-  "pairingDeviceNameLabel": "Device name",
-  "pairingDefaultDeviceName": "A.R.M.X {platform} device",
-  "pairingQrHint": "Show this QR code in the admin panel to confirm which key is being paired, or compare the fingerprint below.",
-  "pairingQrSemantics": "QR code containing this device public pairing key",
-  "pairingFingerprintLabel": "Key fingerprint",
-  "pairingSubmit": "Send pairing request",
-  "pairingPendingTitle": "Waiting for approval",
-  "pairingPendingBody": "Approve this device from the A.R.M.X admin panel, then check again here.",
-  "pairingCheckStatus": "Check approval status",
-  "pairingDeviceIdLabel": "Device id",
-  "pairingApprovedTitle": "Device paired",
-  "pairingApprovedBody": "This phone is registered with the server. Continue to sign in.",
-  "pairingApprovedAction": "Continue to sign in",
-  "pairingRejectedTitle": "Pairing refused",
-  "pairingRejectedBody": "The owner declined this device. You can send the request again.",
-  "@pairingServerConnected": {"placeholders": {"version": {"type": "String"}}},
-  "@pairingDefaultDeviceName": {"placeholders": {"platform": {"type": "String"}}},
-  "loginTitle": "Sign in",
-  "loginSubtitle": "Owner account for A.R.M.X AI",
-  "loginUsernameLabel": "Username",
-  "loginPasswordLabel": "Password",
-  "loginRememberDevice": "Remember this device",
-  "loginSubmit": "Sign in",
-  "loginErrorInvalidCredentials": "Wrong username or password.",
-  "loginErrorAccountLocked": "This account is locked after too many attempts. Wait a moment and try again.",
-  "loginErrorNotPaired": "This device is not paired with the server yet.",
-  "loginErrorDeviceRevoked": "The owner revoked this device. Pair it again from the admin panel.",
-  "loginErrorNetwork": "Network error — check your connection and try again.",
-  "loginErrorServerUnreachable": "The server did not respond. Check the address or try again later.",
-  "loginRateLimited": "Too many attempts. Try again in {seconds}s.",
-  "loginSessionExpiredNotice": "Your session expired. Please sign in again.",
-  "sessionSignOut": "Sign out",
-  "sessionSignOutSubtitle": "Ends this session but keeps the device paired",
-  "sessionSignOutTitle": "Sign out of A.R.M.X?",
-  "sessionSignOutBody": "You stay paired with the server; the password is needed to sign in again.",
-  "sessionUnpair": "Unpair device",
-  "sessionUnpairSubtitle": "Clears tokens, keypair and server registration",
-  "sessionUnpairTitle": "Unpair this device?",
-  "sessionUnpairBody": "Removes the server registration, sign-in tokens and the keypair from this phone. You will have to pair again.",
-  "@loginRateLimited": {"placeholders": {"seconds": {"type": "int"}}},
-  "errorPolicyTitle": "Verification required",
-  "errorPolicyBody": "This action needs a higher level of verification.",
-  "errorVerificationTitle": "Verification failed",
-  "errorVerificationBody": "We could not confirm it is you. Try again.",
-  "errorStorageTitle": "Local storage problem",
-  "errorStorageBody": "The app could not read or write local data.",
-  "errorPermissionTitle": "Permission needed",
-  "errorPermissionBody": "A.R.M.X needs this permission to continue. You can grant it in system settings.",
-  "errorUnsupportedTitle": "Not available on this platform",
-  "errorUnsupportedBody": "{reason}",
-  "@errorUnsupportedBody": {
+  "shellRoleLabel": "Role: {role}",
+  "@shellRoleLabel": {
     "placeholders": {
-      "reason": {
-        "type": "String"
+      "role": {
+        "type": "String",
+        "example": "Admin"
       }
     }
   },
-  "errorTransportTitle": "Realtime link is down",
-  "errorTransportBody": "Live updates are paused while the app reconnects.",
-  "errorKillSwitchTitle": "KILL-SWITCH is on",
-  "errorKillSwitchBody": "The assistant is disabled. Re-enable it in Admin to continue.",
-  "errorUnexpectedTitle": "Unexpected error",
-  "errorUnexpectedBody": "Reference code: {code}",
-  "@errorUnexpectedBody": {
-    "placeholders": {
-      "code": {
-        "type": "String"
-      }
-    }
+  "shellKillSwitch": "KILL-SWITCH",
+  "shellKillSwitchHold": "Hold for 1 second to stop everything",
+  "shellKillSwitchEngaged": "KILL-SWITCH is engaged",
+  "shellKillSwitchReleased": "KILL-SWITCH released",
+  "shellConnectionOnline": "Connected",
+  "shellConnectionConnecting": "Connecting…",
+  "shellConnectionOffline": "Offline",
+  "shellConnectionRetrying": "Reconnecting…",
+  "roleAdmin": "Admin",
+  "@roleAdmin": {
+    "description": "Role tag. Kept in Latin script for consistency with the role id."
   },
-  "validationEmpty": "This field is required",
-  "validationNotAbsoluteUrl": "Enter a full address, for example https://armx.example.com",
-  "validationUnsupportedScheme": "Only https (or http on a trusted local network) is allowed",
-  "validationCleartextNotAllowed": "Release builds require https",
-  "validationMissingHost": "The address is missing a host name",
-  "validationBadPort": "The port must be between 1 and 65535",
-  "validationTooLong": "This value is too long",
-  "validationInvalidCharacters": "This value contains characters that are not allowed",
-  "validationBadDeviceKey": "A device key must be 32–128 letters, digits, '-' or '_'",
-  "validationBadThreshold": "Pick a value between 0.10 and 0.99",
-  "validationBadWakeWord": "Use 2–32 letters or digits",
+  "roleVip": "VIP",
+  "@roleVip": {
+    "description": "Role tag."
+  },
+  "roleUser": "User",
+  "@roleUser": {
+    "description": "Role tag. Kept in Latin script."
+  },
   "riskLow": "LOW",
+  "@riskLow": {
+    "description": "Risk tier tag."
+  },
   "riskMedium": "MEDIUM",
+  "@riskMedium": {
+    "description": "Risk tier tag."
+  },
   "riskHigh": "HIGH",
-  "riskTierSemantics": "{tier} risk action",
-  "@riskTierSemantics": {
-    "placeholders": {
-      "tier": {
-        "type": "String"
-      }
-    }
+  "@riskHigh": {
+    "description": "Risk tier tag."
   },
-  "orbStateIdle": "Idle",
-  "orbStateListening": "Listening",
-  "orbStateThinking": "Thinking",
-  "orbStateSpeaking": "Speaking",
-  "orbStateLocked": "Locked",
-  "orbSemantics": "Assistant is {state}",
-  "@orbSemantics": {
-    "placeholders": {
-      "state": {
-        "type": "String"
-      }
-    }
-  },
-  "statusConnecting": "Connecting…",
+  "riskLowExplain": "Runs immediately. No confirmation needed.",
+  "riskMediumExplain": "Needs your confirmation before it runs.",
+  "riskHighExplain": "Destructive or security-sensitive. Needs explicit confirmation.",
+  "statusOnline": "Online",
+  "statusOffline": "Offline",
   "statusConnected": "Connected",
-  "statusReconnecting": "Reconnecting…",
   "statusDisconnected": "Disconnected",
-  "statusLocked": "Locked",
-  "statusKilled": "KILL-SWITCH",
-  "placeholderStartedInStep": "This screen arrives in step {step}",
-  "@placeholderStartedInStep": {
+  "statusPaired": "Paired",
+  "statusUnpaired": "Not paired",
+  "statusActive": "Active",
+  "statusInactive": "Inactive",
+  "statusSuspended": "Suspended",
+  "statusApproved": "Approved",
+  "statusDenied": "Denied",
+  "statusFailed": "Failed",
+  "statusSuccess": "Success",
+  "statusWarning": "Needs attention",
+  "statusDeploying": "Deploying…",
+  "statusLastActive": "Last active {when}",
+  "@statusLastActive": {
     "placeholders": {
-      "step": {
-        "type": "int"
+      "when": {
+        "type": "String",
+        "example": "3 hours ago"
       }
     }
   },
-  "placeholderStepBody": "A.R.M.X is being built in reported steps. The route, theme and mock backend for this screen already work.",
+  "statusNever": "Never",
   "a11yLoading": "Loading content",
-  "a11yError": "Error state. {message}",
-  "@a11yError": {
+  "a11yErrorOccurred": "An error occurred",
+  "a11yCloseDialog": "Close dialog",
+  "a11yStatusDot": "Status: {status}",
+  "@a11yStatusDot": {
     "placeholders": {
-      "message": {
-        "type": "String"
+      "status": {
+        "type": "String",
+        "example": "Online"
       }
     }
   },
-  "killSwitchTitle": "KILL-SWITCH",
-  "killSwitchHoldHint": "Long-press for 1 second",
-  "killSwitchEngaged": "Assistant disabled — tap to re-enable in Admin",
-  "killSwitchArmed": "Hold to disable everything",
-  "verificationFace": "Face",
-  "verificationVoice": "Voice",
-  "verificationBiometric": "Biometric/PIN",
-  "verificationRequired": "Verification required",
-  "verificationExpiresIn": "expires in {seconds}s",
-  "shellLockApp": "Lock app",
-  "shellConnection": "Connection",
-  "shellNotConnected": "Not connected",
-  "shellMockBackend": "Mock backend",
-  "diagnosticsTitle": "Diagnostics",
-  "diagnosticsLogLines": "Recent log lines",
-  "diagnosticsCopyLogs": "Copy logs",
-  "diagnosticsClearLogs": "Clear logs",
-  "diagnosticsConfiguration": "Configuration",
-  "designSystemTitle": "Design system",
-  "designSystemSubtitle": "Tokens, orb states, risk chips and panels",
-  "settingsPrivacySection": "Privacy",
-  "settingsSecuritySection": "Security",
-  "settingsVoiceSection": "Voice",
-  "settingsVisionSection": "Vision",
-  "assistantModeSection": "Background assistant",
-  "assistantModeSubtitle": "Android foreground-service status and controls",
-  "assistantModeTitle": "Listening service",
-  "assistantModeUnsupported": "Android only",
-  "assistantModeDesktopUnsupported": "Background listening is Android-only in this delivery. Desktop tray support is a later step.",
-  "assistantModeStopped": "Stopped",
-  "assistantModeStarting": "Starting",
-  "assistantModeRunning": "Service active",
-  "assistantModePaused": "Paused",
-  "assistantModeKilled": "KILL-SWITCH",
-  "assistantModeError": "Service error",
-  "assistantModeWakeWordPending": "The foreground-service shell is in place, but the wake-word engine is not attached yet. It does not open the microphone or capture audio in this delivery.",
-  "assistantModeEngineReady": "The on-device wake-word engine is ready.",
-  "assistantModeRebootNotice": "Android does not start a microphone service at boot. After reboot, open A.R.M.X and start it while the app is visible. Android 14+ blocks microphone-service starts from the background.",
-  "assistantModePermissionNeeded": "Grant microphone and notification permissions before starting the Android foreground service.",
-  "assistantModeBackgroundStartBlocked": "Android blocked a background start. Open A.R.M.X and start the service while the app is visible.",
-  "assistantModeServiceError": "Android could not start the listening service. Check permissions and try again.",
-  "assistantModeStart": "Start service",
-  "assistantModePause": "Pause",
-  "assistantModeResume": "Resume",
-  "assistantModeStop": "Stop service",
-  "licensesTitle": "Licences",
-  "creditFooter": "A.R.M.X AI by THAMJJ13.TOP - Md. Moshiur Rahman Mohi. All Rights Reserved.",
-  "appLockTitle": "App locked",
-  "appLockPrompt": "Unlock A.R.M.X to continue",
-  "appLockChecking": "Verifying your identity\u2026",
-  "appLockFailed": "Couldn\u2019t unlock A.R.M.X. Try again.",
-  "appLockUnlockAction": "Unlock",
-  "appLockUsePin": "Use app PIN",
-  "appLockUseSystem": "Use system unlock",
-  "appLockNoSystem": "This device has no biometrics or screen PIN. Create an A.R.M.X app PIN to protect the app.",
-  "appLockPinEntryLabel": "Enter your app PIN",
-  "appLockPinSetupTitle": "Create an app PIN",
-  "appLockPinSetupBody": "Choose a 4\u20138 digit PIN. It is hashed with Argon2id and stored only on this device.",
-  "appLockPinConfirmLabel": "Confirm PIN",
-  "appLockPinSave": "Save PIN",
-  "appLockPinMismatch": "The PINs don\u2019t match. Try again.",
-  "appLockWrongPin": "Wrong PIN. Try again.",
-  "appLockPinInvalid": "Use 4\u20138 digits.",
-  "appLockSettingTitle": "Require unlock to open A.R.M.X",
-  "appLockSettingSubtitle": "Asks for your fingerprint, face, device PIN or the A.R.M.X app PIN when the app opens or returns from the background.",
-  "appLockTimeoutTitle": "Auto-lock after",
-  "appLockTimeoutImmediate": "Immediately",
-  "appLockTimeout30s": "30 seconds",
-  "appLockTimeout60s": "1 minute",
-  "appLockTimeout300s": "5 minutes",
-  "@verificationExpiresIn": {
+  "a11yPasswordVisible": "Show password",
+  "a11yPasswordHidden": "Hide password",
+  "a11yRequiredField": "Required field",
+  "a11ySelected": "Selected",
+  "a11yNotSelected": "Not selected",
+  "a11ySkipToContent": "Skip to main content",
+  "errorGenericTitle": "Something went wrong",
+  "errorGenericBody": "The request could not be completed. Nothing was changed.",
+  "errorNetworkTitle": "No connection",
+  "errorNetworkBody": "A.R.M.X cannot reach the server. Check your connection and try again.",
+  "errorTimeoutTitle": "The server took too long",
+  "errorTimeoutBody": "The request timed out. It is safe to try again.",
+  "errorUnauthorizedTitle": "Session expired",
+  "errorUnauthorizedBody": "Please sign in again to continue.",
+  "errorForbiddenTitle": "Not permitted",
+  "errorForbiddenBody": "Your role does not have access to this area.",
+  "errorNotFoundTitle": "Not found",
+  "errorNotFoundBody": "That item no longer exists. It may have been deleted.",
+  "errorServerTitle": "Server error",
+  "errorServerBody": "The server reported a problem. Nothing was changed — please retry.",
+  "errorValidationTitle": "Check the form",
+  "errorValidationBody": "Some fields need attention before this can continue.",
+  "errorUnexpectedBody": "An unexpected error occurred. The reference below helps support.",
+  "errorBackendUnavailable": "The backend integration is offline — controls are read-only until it returns.",
+  "errorOfflineQueued": "You are offline. This will be sent when the connection returns.",
+  "emptyDefaultTitle": "Nothing here yet",
+  "emptyDefaultBody": "Once there is data to show, it will appear here.",
+  "emptySearchTitle": "No matches",
+  "emptySearchBody": "Try a different search term.",
+  "validatorEmailRequired": "Enter your email address",
+  "validatorEmailInvalid": "That does not look like a valid email address",
+  "validatorPasswordRequired": "Enter your password",
+  "validatorPasswordTooShort": "Use at least {min} characters",
+  "@validatorPasswordTooShort": {
+    "placeholders": {
+      "min": {
+        "type": "int",
+        "example": "8"
+      }
+    }
+  },
+  "validatorPasswordWeak": "Include an uppercase letter, a lowercase letter and a number",
+  "validatorPasswordMismatch": "The passwords do not match",
+  "validatorConfirmRequired": "Re-enter your password to confirm",
+  "validatorNameRequired": "Enter a name",
+  "validatorTooLong": "Use at most {max} characters",
+  "@validatorTooLong": {
+    "placeholders": {
+      "max": {
+        "type": "int",
+        "example": "120"
+      }
+    }
+  },
+  "validatorRequired": "This field is required",
+  "validatorNumberInvalid": "Enter a number",
+  "validatorUrlInvalid": "Enter a valid address",
+  "validatorCodeInvalid": "Enter the full code",
+  "settingsTitle": "Settings",
+  "settingsLanguage": "Language",
+  "settingsLanguageEnglish": "English",
+  "@settingsLanguageEnglish": {
+    "description": "Language name; intentionally shown in its own language."
+  },
+  "settingsLanguageBengali": "বাংলা",
+  "@settingsLanguageBengali": {
+    "description": "Language name; intentionally shown in its own language."
+  },
+  "settingsTheme": "Appearance",
+  "settingsThemeDark": "Dark",
+  "settingsThemeLight": "Light",
+  "settingsThemeSystem": "Match system",
+  "settingsNotifications": "Notifications",
+  "settingsPermissions": "Device permissions",
+  "settingsSessions": "Sessions",
+  "settingsAbout": "About",
+  "settingsDiagnostics": "Diagnostics",
+  "settingsDesignSystem": "Design system",
+  "confirmActionLabel": "Action",
+  "confirmTargetLabel": "Target",
+  "confirmTypeToProceed": "Type {phrase} to enable the button",
+  "@confirmTypeToProceed": {
+    "placeholders": {
+      "phrase": {
+        "type": "String",
+        "example": "CONFIRM"
+      }
+    }
+  },
+  "confirmIrreversible": "This cannot be undone.",
+  "confirmWaitingBackend": "Waiting for the server to confirm…",
+  "authFeatureVoice": "Voice-first, in Bengali and English.",
+  "authFeatureHome": "Runs the house: lights, fans, alarms and locks.",
+  "authFeatureRisk": "Every risky action asks you first.",
+  "authLoginTitle": "Sign in",
+  "authLoginSubtitle": "Continue to your A.R.M.X workspace.",
+  "authEmailLabel": "Email",
+  "authEmailHint": "you@example.com",
+  "authPasswordLabel": "Password",
+  "authSignInAction": "Sign in",
+  "authForgotPassword": "Forgot password?",
+  "authOrDivider": "or",
+  "authContinueWithGoogle": "Continue with Google",
+  "authNoAccount": "New to A.R.M.X?",
+  "authCreateAccount": "Create an account",
+  "authSignupTitle": "Create your account",
+  "authSignupSubtitle": "We will email you a link to verify the address before you can sign in.",
+  "authNameLabel": "Display name",
+  "authConfirmPasswordLabel": "Confirm password",
+  "authSignUpAction": "Create account",
+  "authHaveAccount": "Already have an account?",
+  "authSignInLink": "Sign in",
+  "authPasswordRule": "At least 8 characters, with an uppercase letter, a lowercase letter and a number.",
+  "authVerifyTitle": "Check your inbox",
+  "authVerifyBody": "We sent a verification link to {email}. Open it on this device to finish setting up.",
+  "@authVerifyBody": {
+    "placeholders": {
+      "email": {
+        "type": "String",
+        "example": "you@example.com"
+      }
+    }
+  },
+  "authVerifyResend": "Resend the email",
+  "authVerifyResent": "Sent. Check your inbox again.",
+  "authVerifyResendWait": "You can resend in {seconds}s",
+  "@authVerifyResendWait": {
     "placeholders": {
       "seconds": {
-        "type": "int"
+        "type": "int",
+        "example": "45"
       }
     }
   },
-  "commonFix": "Fix",
-  "devicesOnline": "Online",
-  "devicesOffline": "Offline",
-  "deviceAvailabilityPresent": "Available",
-  "deviceAvailabilityAbsent": "Not present",
-  "deviceAvailabilityChecking": "Checking…",
-  "deviceAvailabilityUnsupported": "Not supported on this platform",
-  "desktopTrayIdle": "Idle",
-  "desktopTrayListening": "Listening",
-  "desktopTrayThinking": "Thinking",
-  "desktopTrayMuted": "Muted",
-  "desktopTrayKilled": "KILL-SWITCH",
-  "desktopTrayConnected": "connected to {server}",
-  "@desktopTrayConnected": {"placeholders": {"server": {"type": "String"}}},
-  "desktopTrayDisconnected": "not connected",
-  "desktopTrayIdleTooltip": "A.R.M.X — idle, {connection}",
-  "@desktopTrayIdleTooltip": {"placeholders": {"connection": {"type": "String"}}},
-  "desktopTrayListeningTooltip": "A.R.M.X — listening, {connection}",
-  "@desktopTrayListeningTooltip": {"placeholders": {"connection": {"type": "String"}}},
-  "desktopTrayThinkingTooltip": "A.R.M.X — thinking, {connection}",
-  "@desktopTrayThinkingTooltip": {"placeholders": {"connection": {"type": "String"}}},
-  "desktopTrayMutedTooltip": "A.R.M.X — listening paused, {connection}",
-  "@desktopTrayMutedTooltip": {"placeholders": {"connection": {"type": "String"}}},
-  "desktopTrayKilledTooltip": "A.R.M.X — KILL-SWITCH engaged, {connection}",
-  "@desktopTrayKilledTooltip": {"placeholders": {"connection": {"type": "String"}}},
-  "desktopTrayReconnectingTooltip": "A.R.M.X — reconnecting, {connection}",
-  "@desktopTrayReconnectingTooltip": {"placeholders": {"connection": {"type": "String"}}},
-  "desktopMenuOpen": "Open A.R.M.X",
-  "desktopMenuTalk": "Talk now",
-  "desktopMenuPauseListening": "Pause listening",
-  "desktopMenuPause15": "Pause for 15 minutes",
-  "desktopMenuPause60": "Pause for 1 hour",
-  "desktopMenuPause240": "Pause for 4 hours",
-  "desktopMenuResume": "Resume listening",
-  "desktopMenuStatus": "Background readiness",
-  "desktopMenuKill": "KILL-SWITCH",
-  "desktopMenuSettings": "Settings",
-  "desktopMenuQuit": "Quit",
-  "desktopMenuStatusTitle": "Background readiness",
-  "desktopMenuStatusBody": "Autostart {autostart} · tray {tray} · hotkey {hotkey}",
-  "@desktopMenuStatusBody": {"placeholders": {"autostart": {"type": "String"}, "tray": {"type": "String"}, "hotkey": {"type": "String"}}},
-  "desktopMenuQuitConfirmTitle": "Quit A.R.M.X?",
-  "desktopMenuQuitConfirmBody": "A.R.M.X is listening right now. Quitting stops it. Close the window instead to keep it running in the tray.",
-  "desktopAutostartTitle": "Launch A.R.M.X at login",
-  "desktopAutostartSubtitle": "Runs quietly in the background with a tray icon",
-  "desktopAutostartOn": "Enabled",
-  "desktopAutostartOff": "Disabled",
-  "desktopAutostartFix": "Turn it on in Settings → Background mode",
-  "desktopHotkeyTitle": "Global hotkey",
-  "desktopHotkeyChange": "Change",
-  "desktopHotkeyRecording": "Press a combination…",
-  "desktopHotkeyListening": "Listening for keys…",
-  "desktopHotkeyHint": "Hold at least one modifier (Ctrl, Alt, Shift or ⌘) and press any key.",
-  "desktopHotkeyConflict": "Already in use by another app. Pick another combination.",
-  "desktopHotkeyRegistered": "Registered",
-  "desktopHotkeyTaken": "Not registered — combination in use",
-  "desktopHotkeyFix": "Pick a different combination in Settings",
-  "desktopHotkeyLabel": "Hotkey {keys}",
-  "@desktopHotkeyLabel": {"placeholders": {"keys": {"type": "String"}}},
-  "desktopTrayRow": "Tray icon",
-  "desktopTrayRunning": "Visible in the system tray",
-  "desktopTrayStopped": "Not running",
-  "desktopTrayFix": "Restart A.R.M.X and check that the desktop shell started",
-  "desktopMicRow": "Microphone",
-  "desktopMicPresent": "Ready — wake word can run",
-  "desktopMicMissing": "Not found — voice is disabled",
-  "desktopMicFix": "Connect a microphone, then re-check",
-  "desktopCameraRow": "Camera",
-  "desktopCameraPresent": "Ready — face verification available",
-  "desktopCameraMissing": "Not found — typed passphrase instead",
-  "desktopCameraFix": "Connect a camera, then re-check",
-  "desktopVoiceUnavailableHint": "Voice unavailable — use hotkey",
-  "desktopCameraUnavailableHint": "Camera unavailable — typed passphrase only",
-  "desktopReadinessTitle": "Background readiness",
-  "desktopReadinessAllGood": "A.R.M.X is ready to run in the background.",
-  "desktopReadinessAttention": "One or more checks need attention.",
-  "desktopReadinessChecklist": "Checklist",
-  "desktopReadinessRecheck": "Re-check devices",
-  "desktopReadinessFootnote": "A.R.M.X always shows a tray icon so you can quit it. A background app with no tray icon looks like malware to antivirus and Gatekeeper.",
-  "desktopPopupTypedMode": "Typed input",
-  "desktopPopupTypedHint": "No microphone detected. Type your request below.",
-  "desktopPopupListening": "Listening",
-  "desktopPopupDismiss": "Dismiss (Esc)",
-  "desktopErrorHotkeyConflict": "That hotkey is already in use.",
-  "desktopErrorKillSwitchReleaseBlocked": "Open the A.R.M.X window to release the KILL-SWITCH.",
-  "desktopErrorAutostartFailed": "Could not change the login setting.",
-  "desktopErrorStartFailed": "Could not start the desktop shell.",
-  "desktopBackgroundSection": "Background mode",
-  "desktopBackgroundSubtitle": "Tray icon, hotkey and launch at login (Windows, macOS, Linux)",
-  "desktopOnly": "Desktop only",
-  "intercomEnabledTitle": "Voice announcements from Admin/Owner",
-  "intercomEnabledSubtitle": "Off by default. Turn it on to let the Admin speak to this device.",
-  "intercomConsentTitle": "Voice announcements",
-  "intercomConsentMainTitle": "Allow voice announcements from Admin/Owner",
-  "intercomConsentExplain": "When this is ON, the Admin or Owner can speak to this device. You will always hear a chime and see who is speaking before the audio plays. Nobody — including the Admin — can turn this on for you, and you can turn it off at any time.",
-  "intercomConsentLockedTitle": "Allow while phone is locked",
-  "intercomConsentLockedBody": "Off by default. When off, announcements only play while the screen is unlocked.",
-  "intercomConsentRulesTitle": "What this feature can and cannot do",
-  "intercomRuleConsent": "Off until you turn it on. There is no way to enable it remotely.",
-  "intercomRuleAudible": "Always audible and visible: a chime, then the speaker's name, then the audio.",
-  "intercomRuleMutual": "Everything the Admin sees about this device, you see too in My Activity.",
-  "intercomConsentEnable": "Turn on announcements",
-  "intercomTurnOff": "Turn off announcements",
-  "intercomConsentRevokeNote": "Revoking takes effect immediately, on this device only, and needs no approval.",
-  "intercomTalkTitle": "Talk",
-  "intercomBroadcastBody": "Broadcast: every device that turned announcements on will hear you.",
-  "intercomDirectBody": "Direct: pick one device below, then hold to talk.",
-  "intercomRecipientsTitle": "Opted-in devices",
-  "intercomRecipientsSubtitle": "Devices that have not turned announcements on are not listed here.",
-  "intercomNoTargetsTitle": "No opted-in devices",
-  "intercomNoTargetsBody": "Nobody has turned voice announcements on yet. They must switch it on themselves — you cannot enable it for them.",
-  "intercomIncluded": "Included",
-  "intercomSelected": "Selected",
-  "intercomTapToSelect": "Tap to select",
-  "intercomHoldToTalk": "Hold to talk",
-  "intercomReleaseToSend": "Release to send",
-  "intercomSending": "Sending…",
-  "intercomRecentTitle": "Recent announcements",
-  "intercomRecentSubtitle": "Delivery status as reported by each device",
-  "intercomExportCsv": "Export CSV",
-  "intercomDisabledTitle": "Voice announcements are off",
-  "intercomDisabledBody": "Turn the feature on to use the Talk screen.",
-  "intercomEnableFeature": "Turn on",
-  "intercomOutcomeLabel": "{status}",
-  "@intercomOutcomeLabel": {"placeholders": {"status": {"type": "String"}}},
-  "intercomOutcomeDelivered": "Delivered",
-  "intercomOutcomePlayed": "Played",
-  "intercomOutcomeMissed": "Missed (offline)",
-  "intercomOutcomeRevoked": "Revoked",
-  "intercomOutcomeQueued": "Queued",
-  "intercomSendBlocked": "Blocked: {reason}",
-  "@intercomSendBlocked": {"placeholders": {"reason": {"type": "String"}}},
-  "intercomSpeakingFrom": "{name} is speaking",
-  "@intercomSpeakingFrom": {"placeholders": {"name": {"type": "String"}}},
-  "intercomOverlayBody": "Voice announcement from A.R.M.X Admin",
-  "intercomOverlayRinging": "Ringing…",
-  "intercomMuteOnce": "Mute this once",
-  "intercomMyActivityTitle": "My Activity",
-  "intercomMyActivitySubtitle": "Everything the Admin panel shows about this device",
-  "intercomAdminLogTitle": "Announcement log",
-  "intercomLogEmptyTitle": "No announcements yet",
-  "intercomLogEmptyBody": "Announcements you receive or send will appear here.",
-  "intercomExportNote": "Visible to this user in their own Activity screen · {rows} rows",
-  "@intercomExportNote": {"placeholders": {"rows": {"type": "int"}}},
-  "intercomRowTitle": "{from} → {target}",
-  "@intercomRowTitle": {"placeholders": {"from": {"type": "String"}, "target": {"type": "String"}}},
-  "intercomEveryone": "everyone opted in",
-  "voiceTitle": "Voice",
-  "voiceSubtitle": "Push-to-talk, wake word and spoken replies",
-  "voiceOpenTitle": "Voice pipeline",
-  "voiceOpenSubtitle": "Push-to-talk, wake word, spoken replies",
-  "voiceStopSpeaking": "Stop speaking",
-  "voiceHoldToTalk": "Hold to talk",
-  "voiceHoldRelease": "Listening — release to send",
-  "voicePushToTalkHint": "Press and hold, then speak. Releasing sends the transcript to the assistant.",
-  "voiceChatMicTooltip": "Hold to talk",
-  "voiceMicOffNotice": "The microphone is switched off. Turn it on above to talk.",
-  "voiceTranscriptTitle": "Heard",
-  "voiceListening": "Listening…",
-  "voiceTranscriptEmpty": "Nothing captured yet.",
-  "voiceSendToAssistant": "Send to assistant",
-  "voiceDiscard": "Discard",
-  "voiceLevelSemantics": "Microphone level",
-  "voiceLanguageTitle": "Recognition language",
-  "voiceLanguageNote": "Recognition and playback use {language}.",
-  "@voiceLanguageNote": {"placeholders": {"language": {"type": "String"}}},
-  "voicePrivacyTitle": "Privacy",
-  "voiceMicrophoneTitle": "Microphone",
-  "voiceMicrophoneSubtitle": "Off by default. While off, no part of A.R.M.X opens the microphone.",
-  "voiceAutoSpeakTitle": "Speak replies aloud",
-  "voiceAutoSpeakSubtitle": "Play assistant answers through the device speaker.",
-  "voiceWakeWordTitle": "Wake word",
-  "voiceWakeWordSubtitle": "Say “{phrase}” to start talking.",
-  "@voiceWakeWordSubtitle": {"placeholders": {"phrase": {"type": "String"}}},
-  "voiceWakeWordUnsupported": "Background listening needs the Android foreground service. On desktop, use the global hotkey instead.",
-  "voiceBackgroundServiceState": "Foreground service: {state}",
-  "@voiceBackgroundServiceState": {"placeholders": {"state": {"type": "String"}}},
-  "voiceWakeWordStubNotice": "This build attaches a no-audio detector stub. The visible foreground-service notification stays on, but A.R.M.X does not capture background audio.",
-  "voiceWakeWordRealNotice": "A real on-device detector is attached. Only the detection result crosses the bridge — never audio.",
-  "voiceSimulateWakeWord": "Simulate wake word (demo)",
-  "voiceSimulateWakeWordNote": "Shown only while the stub is attached; no audio is used.",
-  "voiceEnginesTitle": "Engines",
-  "voiceEngineStt": "Speech recognition",
-  "voiceEngineSttNote": "On-device recognition; transcripts are never uploaded.",
-  "voiceEngineTts": "Speech playback",
-  "voiceEngineTtsNote": "System text-to-speech.",
-  "voiceEngineWakeWord": "Wake-word detector",
-  "voiceEngineWakeWordNote": "Native adapter; the demo build ships the stub.",
-  "voiceEngineReal": "available",
-  "voiceEngineSimulated": "simulated",
-  "voiceEngineUnavailable": "unavailable",
-  "voiceVerifyHint": "Voice alone never satisfies a risk tier. A spoken challenge is only one factor beside face and the system biometric.",
-  "voiceErrorMicOff": "The microphone is switched off in A.R.M.X.",
-  "voiceErrorPermission": "Microphone permission is required.",
-  "voiceErrorNotificationPermission": "Notification permission is required for the visible listening service.",
-  "voiceErrorUnavailable": "No speech recognizer is available on this device.",
-  "voiceErrorBackgroundUnsupported": "Background listening is not available on this platform.",
-  "voiceErrorWakeWordEngine": "The wake-word engine reported an error.",
-  "voiceErrorGeneric": "Voice capture failed. Please try again.",
-  "voiceWakeWordSensitivityTitle": "Wake word sensitivity",
-  "voiceEngineSimulatedNote": "Simulated in this build; no microphone audio is captured."
+  "authVerifyBackToSignIn": "Back to sign in",
+  "authForgotTitle": "Reset your password",
+  "authForgotSubtitle": "Enter the address on the account and we will email a reset link.",
+  "authForgotAction": "Email me a reset link",
+  "authForgotSentTitle": "Reset link sent",
+  "authForgotSentBody": "If an account exists for {email}, a reset link is on its way. The link expires in 30 minutes.",
+  "@authForgotSentBody": {
+    "placeholders": {
+      "email": {
+        "type": "String",
+        "example": "you@example.com"
+      }
+    }
+  },
+  "authResetTitle": "Choose a new password",
+  "authResetSubtitle": "This link can be used once, and only for the account it was sent to.",
+  "authResetAction": "Set new password",
+  "authResetDoneTitle": "Password updated",
+  "authResetDoneBody": "Sign in with your new password. Every other session has been signed out.",
+  "authResetInvalidTitle": "This link is not valid",
+  "authResetInvalidBody": "The reset link is unknown, already used, or incomplete. Request a new one.",
+  "authResetExpiredTitle": "This link has expired",
+  "authResetExpiredBody": "Reset links are valid for 30 minutes. Request a fresh one to continue.",
+  "authResetRequestNew": "Request a new link",
+  "authSignOutEverywhere": "Signed out of other devices",
+  "authPreviousPassword": "Your previous password no longer works.",
+  "authErrorInvalidCredentials": "That email and password do not match. Check both and try again.",
+  "authErrorEmailNotVerified": "This address has not been verified yet. Open the link we emailed you.",
+  "authErrorEmailTaken": "That email already has an account. Try signing in instead.",
+  "authErrorRateLimited": "Too many attempts. Wait a minute before trying again.",
+  "authErrorGoogleCancelled": "Google sign-in was cancelled.",
+  "authErrorGoogleFailed": "Google sign-in could not be completed. Try again, or use a password.",
+  "authErrorTokenInvalid": "That link is not valid. Request a new one.",
+  "authErrorTokenExpired": "That link has expired. Request a new one.",
+  "authGoogleNotConfigured": "Google sign-in is not configured on this build.",
+  "authGoogleStubNotice": "Google sign-in is wired to a stub until the backend client id is provisioned.",
+  "@authGoogleStubNotice": {
+    "description": "Kept in Latin script in both languages by design."
+  },
+  "authRolePendingNotice": "New accounts start as User. An admin raises the role afterwards.",
+  "assistantEmptyTitle": "Ask me anything about the house",
+  "assistantEmptyBody": "Try a status question, or ask me to change something. Anything risky asks you first.",
+  "assistantTrySample": "Try a question",
+  "assistantSampleLowRisk": "What is the workshop temperature?",
+  "assistantSampleHighRiskHint": "Publish a small site",
+  "assistantSampleDeploy": "Publish a small site for the fair",
+  "assistantComposerHint": "Message A.R.M.X…",
+  "assistantSend": "Send",
+  "assistantHoldToTalk": "Hold to talk",
+  "assistantHoldToTalkHint": "Release to send your voice message",
+  "assistantListeningNow": "Listening",
+  "assistantMicIdle": "Microphone idle",
+  "assistantWakeWordArmed": "Wake word armed",
+  "assistantWakeWordOff": "Wake word off",
+  "assistantVoiceUnavailable": "No microphone is available here, so type instead — everything else works the same.",
+  "assistantLanguage": "Replying in {language}",
+  "@assistantLanguage": {
+    "placeholders": {
+      "language": {
+        "type": "String",
+        "example": "বাংলা"
+      }
+    }
+  },
+  "chatYouSaid": "You",
+  "chatAssistantSaid": "A.R.M.X",
+  "@chatAssistantSaid": {
+    "description": "Kept in Latin script in both languages by design."
+  },
+  "chatSending": "Sending…",
+  "chatSendFailed": "Not sent",
+  "toolProposalTitle": "Proposed action",
+  "toolNeedsDecision": "Waiting for your decision",
+  "toolRunning": "Running",
+  "toolDenied": "You declined this",
+  "toolExpired": "This proposal expired",
+  "toolApprove": "Approve",
+  "toolDeny": "Decline",
+  "toolPendingPanelTitle": "Waiting on you",
+  "toolPendingPanelBody": "Nothing runs until you decide. Declining performs no action at all.",
+  "toolIdempotentNote": "Approving this sends exactly the values shown above.",
+  "homeGreetingMorning": "Good morning",
+  "homeGreetingAfternoon": "Good afternoon",
+  "homeGreetingEvening": "Good evening",
+  "homeSubtitle": "Here is the estate at a glance.",
+  "homeDevicesOnline": "{online} of {total} devices online",
+  "@homeDevicesOnline": {
+    "placeholders": {
+      "online": {
+        "type": "int",
+        "example": "5"
+      },
+      "total": {
+        "type": "int",
+        "example": "7"
+      }
+    }
+  },
+  "homeNextAlarm": "Next alarm",
+  "homeNoAlarms": "No alarms armed",
+  "homeGreeterState": "Guest greeter",
+  "homeRecentActivity": "Recent activity",
+  "homeQuickActions": "Quick actions",
+  "homeOpenAssistant": "Ask the assistant",
+  "homeKillSwitchHint": "Hold the kill-switch for one second to stop everything.",
+  "homeUnverifiedBanner": "This address is not verified. Some features stay unavailable until it is.",
+  "smartHomeTitle": "Smart home",
+  "smartHomeSubtitle": "Rooms, lights and sensors.",
+  "smartHomeAllRooms": "All rooms",
+  "smartHomeEmptyTitle": "No devices yet",
+  "smartHomeEmptyBody": "Devices appear here once they are paired to your account.",
+  "smartHomeOfflineNote": "This device is offline. A command will be queued, not applied.",
+  "smartHomeReadOnly": "Read-only sensor",
+  "smartHomeNotPermitted": "Your role can see this device but not control it.",
+  "smartHomeTurnOn": "Turn on",
+  "smartHomeTurnOff": "Turn off",
+  "smartHomeBrightness": "Brightness",
+  "smartHomeToggleFailed": "The device did not accept that.",
+  "smartHomeQueued": "Queued until the device returns",
+  "smartHomeSensorReading": "Latest reading",
+  "smartHomeFirmware": "Firmware",
+  "smartHomeRoom": "Room",
+  "smartHomeDeviceStatus": "Device status",
+  "smartHomeManualFallback": "This device also has a physical switch — use it if the network is down.",
+  "alarmsTitle": "Alarms",
+  "alarmsSubtitle": "Rings on the devices you choose.",
+  "alarmsNew": "New alarm",
+  "alarmsEmptyTitle": "No alarms yet",
+  "alarmsEmptyBody": "Create one and pick which devices should ring.",
+  "alarmsEditTitle": "Edit alarm",
+  "alarmsCreateTitle": "Create alarm",
+  "alarmsLabel": "Name",
+  "alarmsLabelHint": "Morning, Medicine…",
+  "alarmsTime": "Time",
+  "alarmsRepeat": "Repeat",
+  "alarmsRepeatOnce": "Once",
+  "alarmsRepeatDaily": "Every day",
+  "alarmsRepeatWeekdays": "Weekdays",
+  "alarmsRepeatWeekends": "Weekends",
+  "alarmsSnooze": "Snooze for {minutes} minutes",
+  "@alarmsSnooze": {
+    "placeholders": {
+      "minutes": {
+        "type": "int",
+        "example": "5"
+      }
+    }
+  },
+  "alarmsTargets": "Rings on",
+  "alarmsTargetPhone": "This phone",
+  "alarmsTargetComputer": "Linked computer",
+  "alarmsTargetWatch": "Wearable",
+  "alarmsTargetAll": "All linked devices",
+  "alarmsRingStatus": "Ring status",
+  "alarmsRinging": "Ringing",
+  "alarmsAcknowledged": "Dismissed",
+  "alarmsUnreachable": "Could not be reached",
+  "alarmsTestRing": "Test ring",
+  "alarmsDismiss": "Dismiss on all devices",
+  "alarmsDeleteTitle": "Delete this alarm?",
+  "alarmsDeleteBody": "The alarm stops immediately and cannot be restored.",
+  "alarmsEnabled": "Armed",
+  "alarmsDisabled": "Off",
+  "alarmsNextIn": "In {duration}",
+  "@alarmsNextIn": {
+    "placeholders": {
+      "duration": {
+        "type": "String",
+        "example": "7h 20m"
+      }
+    }
+  },
+  "alarmsSaveFailed": "The alarm could not be saved.",
+  "linkedTitle": "Linked devices",
+  "linkedSubtitle": "Everything signed in to your account.",
+  "linkedPair": "Link a device",
+  "linkedEmptyTitle": "No other devices",
+  "linkedEmptyBody": "Link a phone, computer or watch to use the assistant there too.",
+  "linkedThisDevice": "This device",
+  "linkedOwner": "Linked by {email}",
+  "@linkedOwner": {
+    "placeholders": {
+      "email": {
+        "type": "String",
+        "example": "you@example.com"
+      }
+    }
+  },
+  "linkedPairingTitle": "Link this device",
+  "linkedPairingScanHint": "Scan this code on a device that is already signed in.",
+  "linkedPairingCodeHint": "Or type this code on the trusted device.",
+  "linkedPairingExpires": "Expires in {duration}",
+  "@linkedPairingExpires": {
+    "placeholders": {
+      "duration": {
+        "type": "String",
+        "example": "09:58"
+      }
+    }
+  },
+  "linkedPairingExpired": "This code has expired. Start again for a new one.",
+  "linkedPairingWaiting": "Waiting for approval…",
+  "linkedPairingApproved": "Device linked",
+  "linkedPairingRejected": "The request was refused.",
+  "linkedPairingCancel": "Cancel pairing",
+  "linkedCameraUnavailable": "No camera is available here, so enter the code by hand.",
+  "linkedUnlink": "Unlink",
+  "linkedUnlinkTitle": "Unlink {device}?",
+  "@linkedUnlinkTitle": {
+    "placeholders": {
+      "device": {
+        "type": "String",
+        "example": "Study PC"
+      }
+    }
+  },
+  "linkedUnlinkBody": "The device loses access immediately. This cannot be undone from here.",
+  "linkedUnlinkOwnerPassword": "Owner password",
+  "linkedUnlinkOwnerPasswordHelp": "The password of the account that linked this device — not your own, and never a shared admin password.",
+  "linkedUnlinkWrongPassword": "That password is not correct for the device owner. Nothing was unlinked.",
+  "linkedUnlinkCurrentDevice": "You cannot unlink the device you are using.",
+  "linkedUnlinkDone": "Device unlinked",
+  "linkedRevoked": "Access revoked",
+  "linkedPendingApproval": "Waiting for approval",
+  "linkedFingerprint": "Key fingerprint",
+  "linkedCancel": "Cancel",
+  "greeterTitle": "Guest greeter",
+  "greeterSubtitle": "Camera preview, consent and the kill switch, in one place.",
+  "greeterCameraLive": "Camera is on",
+  "greeterCameraOff": "Camera is off",
+  "greeterCameraKilled": "Camera killed",
+  "greeterKillSwitch": "Kill the camera",
+  "greeterKillSwitchBody": "Stops capture immediately and keeps it stopped until you release it — including after a restart.",
+  "greeterReleaseKill": "Allow the camera again",
+  "greeterPreviewPlaceholder": "The preview appears here while the camera is on.",
+  "greeterPreviewUnavailable": "This platform has no camera available to the app.",
+  "greeterPreviewPermission": "Camera permission has not been granted yet.",
+  "greeterGrantCamera": "Grant camera access",
+  "greeterEnrollTitle": "Add a guest",
+  "greeterEnrollOpen": "Enrol a guest",
+  "greeterEnrollConsentTitle": "Consent",
+  "greeterEnrollConsentBody": "Only enrol someone who has agreed. Their name and a face template stay on this device, encrypted, and either can be deleted at any time.",
+  "greeterEnrollConsentCheck": "This person has agreed to be enrolled.",
+  "greeterEnrollName": "Their name",
+  "greeterEnrollNote": "Note (optional)",
+  "greeterEnrollNoteHint": "Fair judge, meter reader…",
+  "greeterEnrollAction": "Enrol",
+  "greeterEnrollNeedsConsent": "Enrolment is disabled until consent is given.",
+  "greeterEnrollBlockedKill": "The camera is killed. Release it before enrolling anyone.",
+  "greeterStoredTitle": "Enrolled guests",
+  "greeterStoredEmpty": "Nobody is enrolled.",
+  "greeterDeleteTitle": "Delete {name}?",
+  "@greeterDeleteTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "Fair judge"
+      }
+    }
+  },
+  "greeterDeleteBody": "The name and the face template are deleted immediately. This cannot be undone.",
+  "greeterDeleteAction": "Delete this person",
+  "greeterEnrolledOn": "Enrolled {when}",
+  "@greeterEnrolledOn": {
+    "placeholders": {
+      "when": {
+        "type": "String",
+        "example": "2 days ago"
+      }
+    }
+  },
+  "greeterConsentVersion": "Consent wording {version}",
+  "@greeterConsentVersion": {
+    "placeholders": {
+      "version": {
+        "type": "String",
+        "example": "v1"
+      }
+    }
+  },
+  "greeterEventsTitle": "Recent greetings",
+  "greeterEventsEmpty": "No one has been greeted yet.",
+  "greeterConfidence": "Match {percent}%",
+  "@greeterConfidence": {
+    "placeholders": {
+      "percent": {
+        "type": "int",
+        "example": "94"
+      }
+    }
+  },
+  "greeterLowConfidence": "Low confidence — treat this as a guess.",
+  "greeterSpoken": "Greeting spoken",
+  "greeterNotSpoken": "No greeting spoken",
+  "greeterScienceFairNote": "Science-fair mode: the preview is on screen whenever the camera is capturing.",
+  "builderTitle": "Web builder",
+  "builderSubtitle": "Describe a page, review every file, then publish.",
+  "builderPromptLabel": "What should the page do?",
+  "builderPromptHint": "A single page for the science fair with the project name and a contact line.",
+  "builderGenerate": "Generate draft",
+  "builderGenerating": "Generating…",
+  "builderPreviewTitle": "Preview",
+  "builderPreviewEmpty": "Nothing generated yet. The draft appears here — nothing is published until you say so.",
+  "builderFiles": "Files ({count})",
+  "@builderFiles": {
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "2"
+      }
+    }
+  },
+  "builderFileNew": "New file",
+  "builderFileModified": "Modified",
+  "builderLinesAdded": "{count} lines added",
+  "@builderLinesAdded": {
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "18"
+      }
+    }
+  },
+  "builderDeploy": "Publish",
+  "builderDeployTitle": "Publish this site?",
+  "builderDeployConsequence": "The generated files replace the current contents of the branch below.",
+  "builderDeployPending": "Publishing… this can take a moment.",
+  "builderDeployLive": "Live",
+  "builderDeployFailed": "Publishing failed",
+  "builderLiveUrl": "Live address",
+  "builderOpenSite": "Open the site",
+  "builderCommit": "Commit",
+  "builderRepoLabel": "Repository",
+  "builderBranchLabel": "Branch",
+  "builderDeploymentsTitle": "Deployments",
+  "builderDeploymentsEmpty": "Nothing has been published yet.",
+  "builderRepoNotAllowed": "Publishing is limited to the configured project repository.",
+  "builderGenerateFailed": "The draft could not be generated.",
+  "builderNoMarkupNote": "Generated code is shown as text. It is never executed inside this app.",
+  "messagingTitle": "Messaging personality",
+  "messagingSubtitle": "How the assistant writes to each person.",
+  "messagingContacts": "Contacts",
+  "messagingTones": "Tone profiles",
+  "messagingContactsEmpty": "No contacts yet",
+  "messagingContactsEmptyBody": "Add someone to give them their own tone and delivery rule.",
+  "messagingContactTone": "Tone",
+  "messagingDelivery": "When the assistant writes",
+  "messagingAutoSend": "Send automatically",
+  "messagingDraftOnly": "Draft only",
+  "messagingAutoSendWarning": "With automatic sending on, a message can leave this device without you reading it first.",
+  "messagingBlocked": "Blocked",
+  "messagingBlockContact": "Never write to this person",
+  "messagingFormality": "Formality",
+  "messagingWarmth": "Warmth",
+  "messagingVerbosity": "Detail",
+  "messagingEmoji": "Allow emoji",
+  "messagingLanguage": "Language",
+  "messagingLanguageAuto": "Match the contact",
+  "messagingForbiddenTopics": "Never mention",
+  "messagingForbiddenHint": "money, health…",
+  "messagingAddTopic": "Add",
+  "messagingToneSaved": "Tone profile saved",
+  "messagingContactSaved": "Contact updated",
+  "messagingNewTone": "New tone profile",
+  "messagingToneName": "Profile name",
+  "messagingToneTag": "Tag",
+  "adminTitle": "Admin",
+  "adminSubtitle": "Users, tools, audit and the kill-switch.",
+  "adminUsers": "Users",
+  "adminUsersEmpty": "No accounts",
+  "adminUsersEmptyBody": "Accounts appear here once they exist.",
+  "adminRole": "Role",
+  "adminStatus": "Status",
+  "adminLastActive": "Last active",
+  "adminLinkedCount": "Devices",
+  "adminAuditTitle": "Audit log",
+  "adminAuditEmpty": "Nothing logged yet",
+  "adminAuditEmptyBody": "Actions appear here as they happen.",
+  "adminAuditActor": "Actor",
+  "adminAuditAction": "Action",
+  "adminAuditOutcome": "Outcome",
+  "adminAuditTarget": "Target",
+  "adminAuditRequestId": "Request id",
+  "adminToolsTitle": "Tool toggles",
+  "adminToolsEmpty": "No tools reported",
+  "adminToolBlocked": "Blocked while the kill-switch is engaged",
+  "adminPromote": "Change role",
+  "adminPromoteTitle": "Change {email} to {role}?",
+  "@adminPromoteTitle": {
+    "placeholders": {
+      "email": {
+        "type": "String",
+        "example": "a@b.com"
+      },
+      "role": {
+        "type": "String",
+        "example": "Admin"
+      }
+    }
+  },
+  "adminPromoteBody": "The change applies at the account's next request. Admin grants the kill-switch and full user control.",
+  "adminSuspend": "Suspend",
+  "adminSuspendTitle": "Suspend {email}?",
+  "@adminSuspendTitle": {
+    "placeholders": {
+      "email": {
+        "type": "String",
+        "example": "a@b.com"
+      }
+    }
+  },
+  "adminSuspendBody": "They are signed out everywhere and cannot sign back in until restored.",
+  "adminActivate": "Restore access",
+  "adminSelfChangeBlocked": "You cannot change your own admin access.",
+  "adminKillSwitchTitle": "Kill-switch",
+  "adminKillSwitchReleaseBody": "The assistant starts listening again and every enabled tool becomes available.",
+  "adminSessionRevoke": "Sign out that session",
+  "adminSessionRevokeTitle": "Sign out {device}?",
+  "@adminSessionRevokeTitle": {
+    "placeholders": {
+      "device": {
+        "type": "String",
+        "example": "Study PC"
+      }
+    }
+  },
+  "adminSessionRevokeBody": "That device must sign in again. Nothing else changes.",
+  "settingsPreferencesTitle": "Language and appearance",
+  "settingsNotificationsBody": "Choose what may interrupt you.",
+  "settingsNotifyAlarms": "When an alarm fires",
+  "settingsNotifyTools": "When an action needs your approval",
+  "settingsNotifyDeploys": "When a deploy finishes",
+  "settingsPermissionsTitle": "Device permissions",
+  "settingsPermissionsBody": "What this device has been allowed to use.",
+  "settingsPermissionCamera": "Camera",
+  "settingsPermissionMicrophone": "Microphone",
+  "settingsPermissionNotifications": "Notifications",
+  "settingsPermissionOverlay": "Floating bubble",
+  "settingsPermissionBackground": "Background running",
+  "settingsPermissionGranted": "Allowed",
+  "settingsPermissionDenied": "Not allowed",
+  "settingsPermissionRestricted": "Not available on this platform",
+  "settingsPermissionRequest": "Review",
+  "settingsPermissionWhy": "A.R.M.X only asks when a feature you switched on needs it.",
+  "settingsAccountTitle": "Account",
+  "settingsAccountBody": "Your profile, and everywhere you are signed in.",
+  "settingsSessionsTitle": "Active sessions",
+  "settingsSessionsEmpty": "No other sessions",
+  "settingsSessionCurrent": "This session",
+  "settingsSessionStarted": "Started {when}",
+  "@settingsSessionStarted": {
+    "placeholders": {
+      "when": {
+        "type": "String",
+        "example": "4 hours ago"
+      }
+    }
+  },
+  "settingsSessionLastUsed": "Last used {when}",
+  "@settingsSessionLastUsed": {
+    "placeholders": {
+      "when": {
+        "type": "String",
+        "example": "2 hours ago"
+      }
+    }
+  },
+  "settingsSignOutOthers": "Sign out other sessions",
+  "settingsAboutBody": "Version, credits and licences.",
+  "settingsVersion": "Version {version}",
+  "@settingsVersion": {
+    "placeholders": {
+      "version": {
+        "type": "String",
+        "example": "1.0.0+1"
+      }
+    }
+  },
+  "settingsOwner": "Owner",
+  "settingsLicences": "Font licences",
+  "settingsLicencesBody": "Inter and JetBrains Mono are bundled under the SIL Open Font License.",
+  "settingsDiagnosticsBody": "Configuration and transport state. Contains no token.",
+  "settingsDiagnosticsConfig": "Configuration",
+  "settingsDiagnosticsTransport": "Transport",
+  "settingsDiagnosticsDropped": "Unreadable frames dropped: {count}",
+  "@settingsDiagnosticsDropped": {
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "0"
+      }
+    }
+  },
+  "settingsDiagnosticsMockWarning": "This build runs against the in-app mock backend. No server is contacted.",
+  "settingsDiagnosticsTokensNote": "Tokens live in the platform keychain and are never shown here.",
+  "settingsDesignSystemBody": "Every token and shared widget, with live contrast ratios.",
+  "settingsContrastRatio": "Contrast {ratio}:1",
+  "@settingsContrastRatio": {
+    "placeholders": {
+      "ratio": {
+        "type": "String",
+        "example": "5.07"
+      }
+    }
+  },
+  "settingsContrastPass": "Meets AA",
+  "settingsContrastFail": "Below AA",
+  "settingsAboutTagline": "Automated Resource Management eXtension",
+  "settingsProprietary": "Proprietary software. All rights reserved.",
+  "statusRevoked": "Revoked",
+  "statusSuspendedAccount": "Suspended",
+  "statusInvited": "Invited",
+  "statusDisabledAccount": "Disabled",
+  "statusInProgress": "In progress",
+  "statusReplaced": "Replaced",
+  "commonSearchHint": "Search…",
+  "commonNoResults": "Nothing matched that search.",
+  "commonSeconds": "{count}s",
+  "@commonSeconds": {
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "30"
+      }
+    }
+  },
+  "commonMinutes": "{count}m",
+  "@commonMinutes": {
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "5"
+      }
+    }
+  },
+  "commonHours": "{count}h",
+  "@commonHours": {
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "7"
+      }
+    }
+  },
+  "commonDays": "{count}d",
+  "@commonDays": {
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "3"
+      }
+    }
+  },
+  "commonJustNow": "just now",
+  "a11ySelectTab": "Select {name}",
+  "@a11ySelectTab": {
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "Smart home"
+      }
+    }
+  },
+  "smartHomeRoomUnknown": "Unassigned",
+  "smartHomeLocked": "Locked",
+  "smartHomeUnlocked": "Unlocked",
+  "smartHomeUnlock": "Unlock",
+  "smartHomeDeviceUnknown": "This device is not in your account any more.",
+  "greeterCameraOwnedElsewhere": "The guest greeter owns this camera — open it there.",
+  "alarmsEdit": "Edit",
+  "alarmsTargetFallback": "Leave every box clear to ring on this device only.",
+  "alarmsLabelOptional": "Optional — the time is used if it is blank.",
+  "settingsLanguageParity": "Every screen is fully translated in both languages.",
+  "settingsNotificationsUnavailable": "Notifications are delivered by the platform; each can be switched off here.",
+  "splashPreparing": "Preparing your session…",
+  "toolParametersLabel": "Exactly what will be sent",
+  "toolRiskLabel": "Risk",
+  "toolNothingPending": "Nothing is waiting on you",
+  "alarmsSaved": "Alarm saved",
+  "alarmsTargetsBody": "Choose every device that should ring. Nothing selected means this device only.",
+  "alarmsTargetsSelected": "Rings on: {targets}",
+  "@alarmsTargetsSelected": {
+    "placeholders": {
+      "targets": {
+        "type": "String",
+        "example": "This phone, Wearable"
+      }
+    }
+  },
+  "linkedPairingDeviceName": "Name for the new device",
+  "linkedPairingDeviceNameHelp": "What it will be called in this list and in alarm targets.",
+  "linkedPairingDefaultName": "New device",
+  "linkedPairingCode": "Pairing code",
+  "linkedApproveTitle": "Approve another device",
+  "linkedApproveBody": "Type the code shown on the device you are adding. Approving here is what grants it access.",
+  "linkedApproveAction": "Approve this code",
+  "greeterEnrolledDone": "Guest enrolled",
+  "builderDiscard": "Discard this draft",
+  "shellKillSwitchReady": "Assistant responding",
+  "adminToolsSubtitle": "Each capability the assistant may call. Switching one off takes effect at once; switching it back on asks first.",
+  "adminToolsEnabledCount": "{enabled} of {total} capabilities are enabled.",
+  "adminToolsEmptyBody": "The backend did not send a tool list, so nothing can be switched here.",
+  "adminToolsEnable": "Enable this capability",
+  "adminToolsEnableHint": "Off. Turning it on asks for a confirmation first.",
+  "adminToolsDisableHint": "On. Turning it off applies immediately.",
+  "adminToolsEnableTitle": "Enable \"{tool}\"?",
+  "adminToolsEnableBody": "The assistant will be able to call this capability again, with the risk tier shown.",
+  "adminToolsNeedsConfirm": "Confirms every call",
+  "adminToolsAudited": "Audited",
+  "commonEnable": "Enable",
+  "settingsPreferencesBody": "Language, theme and notifications, stored on this device only.",
+  "shellRailCollapse": "Collapse the navigation rail",
+  "adminToolsBlocked": "Blocked by the server",
+  "settingsPermissionNotApplicable": "Not on this platform",
+  "settingsPermissionPermanentlyDenied": "Blocked in system settings",
+  "settingsPermissionsOpenSystem": "Open system settings",
+  "statusUnknown": "Unknown",
+  "settingsPermissionCameraWhy": "For the guest greeter preview. Frames are processed on the device; nothing is uploaded unless the greeter is live and you turned it on.",
+  "settingsPermissionMicrophoneWhy": "For push-to-talk in the assistant. The microphone is only opened while you hold the button.",
+  "settingsPermissionNotificationsWhy": "For alarm rings, tool-call approvals and finished deployments.",
+  "settingsPermissionOverlayWhy": "For the floating assistant bubble that stays on screen above other apps.",
+  "settingsPermissionBackgroundWhy": "So alarms can ring when the screen is off. Without it Android may delay them.",
+  "settingsSessionCurrentNote": "This device. Use sign out above to end it.",
+  "settingsSignOutOthersDone": "{count} other session(s) signed out.",
+  "authEmailVerified": "Email verified",
+  "authEmailNotVerified": "Email not verified",
+  "authSignedOutBody": "This device will be signed out of A.R.M.X AI. Alarms ringing on it still ring.",
+  "overlayTitle": "Floating bubble",
+  "overlayLead": "The bubble keeps A.R.M.X one tap away while you use other apps. It needs Android's \"draw over other apps\" permission, which is the strongest one this app asks for.",
+  "overlayStatusTitle": "Current state",
+  "overlayPermissionGranted": "Permission granted",
+  "overlayPermissionDenied": "Permission not granted",
+  "overlayRunning": "Bubble is on screen",
+  "overlayNotRunning": "No bubble on screen",
+  "overlayExplain": "Once granted, a small handle sits above the app you are using. Tapping it opens the assistant; long-pressing it brings the window back here. It disappears when the kill-switch is engaged.",
+  "overlayPreviewTitle": "What it looks like",
+  "overlayPreviewBackdrop": "(another app)",
+  "overlayPreviewHandle": "Assistant bubble, draggable",
+  "overlayPreviewHint": "Drag the bubble in this mock-up to see where it will sit.",
+  "overlayLimitsTitle": "What the bubble never does",
+  "overlayLimitScreen": "It does not read the screen behind it: no screenshots, no view hierarchy, no keystrokes.",
+  "overlayLimitKillSwitch": "The kill-switch removes it immediately, and it stays gone until you switch it back on.",
+  "overlayLimitMic": "The microphone opens only while you hold the push-to-talk button, even with the bubble open.",
+  "overlayLimitTyping": "It never types anything for you. Anything it proposes still waits for your approval.",
+  "overlayEnable": "Show the floating bubble",
+  "overlayGrantTitle": "Allow drawing over other apps?",
+  "overlayGrantAction": "Ask Android for it",
+  "overlayDeniedNotice": "Android did not grant the permission, so the bubble is still off.",
+  "adminSelfNote": "This is your own account. An admin cannot change their own role or status.",
+  "statusDisabled": "Disabled",
+  "adminKillSwitch": "Stop the assistant",
+  "adminKillSwitchRelease": "Start the assistant again",
+  "adminKillSwitchBody": "While the kill-switch is engaged every device command, alarm ring and tool call is refused at the backend. It is a stop, not a pause on this device.",
+  "adminPromoteRoleTitle": "New role for {name}",
+  "shellKillSwitchIdle": "Assistant is running",
+  "adminAuditFilters": "Filter the log",
+  "adminAuditFilterScope": "Actor and action are filtered by the server. Outcome is filtered on this screen.",
+  "builderDeployQueued": "Queued at the backend — nothing has been published yet",
+  "builderDeployReplaced": "Superseded by a newer deployment"
 }

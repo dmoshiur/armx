@@ -1,169 +1,337 @@
 // Copyright (c) 2026 Md. Moshiur Rahman Mohi / THAMJJ13.TOP. Proprietary. All Rights Reserved.
 
-import 'package:freezed_annotation/freezed_annotation.dart';
+import 'package:meta/meta.dart';
 
-import '../../core/security/risk_tier.dart';
-import 'converters.dart';
-
-part 'device.freezed.dart';
-part 'device.g.dart';
-
-/// What kind of node an [ArmxDevice] is.
+/// What a controllable thing is.
 enum DeviceKind {
-  /// Mains relay / smart plug.
-  @JsonValue('LIGHT')
+  /// A dimmable or switchable light.
   light,
 
-  /// Gate, shutter or barrier relay.
-  @JsonValue('GATE')
-  gate,
+  /// A fan or other variable-speed motor.
+  fan,
 
-  /// Door lock actuator.
-  @JsonValue('LOCK')
-  lock,
+  /// A plug with on/off control.
+  plug,
 
-  /// Sensor-only node (no actuator).
-  @JsonValue('SENSOR')
+  /// A read-only environmental sensor.
   sensor,
 
-  /// Camera node.
-  @JsonValue('CAMERA')
+  /// A camera. Never controllable from this screen; the guest greeter owns it.
   camera,
 
-  /// Anything the server adds later.
-  @JsonValue('OTHER')
-  other,
+  /// A lock with lock/unlock control.
+  lock,
+
+  /// Something the client does not model yet. Rendered generically rather than hidden.
+  other;
+
+  /// Parses a wire value.
+  static DeviceKind fromWire(String? value) => switch (value?.toLowerCase()) {
+        'light' => DeviceKind.light,
+        'fan' => DeviceKind.fan,
+        'plug' || 'socket' => DeviceKind.plug,
+        'sensor' => DeviceKind.sensor,
+        'camera' => DeviceKind.camera,
+        'lock' => DeviceKind.lock,
+        _ => DeviceKind.other,
+      };
+
+  /// True when the device exposes on/off and/or level control.
+  bool get isControllable =>
+      this == DeviceKind.light ||
+      this == DeviceKind.fan ||
+      this == DeviceKind.plug ||
+      this == DeviceKind.lock;
+
+  /// True when the device only reports readings.
+  bool get isReadOnly => this == DeviceKind.sensor;
 }
 
-/// State of a relay channel.
-enum RelayState {
-  /// Energised.
-  @JsonValue('ON')
-  on,
+/// A sensor reading with its unit, so the UI never renders a bare number.
+@immutable
+class SensorReading {
+  /// Creates a reading.
+  const SensorReading({
+    required this.metric,
+    required this.value,
+    required this.unit,
+    this.recordedAt,
+  });
 
-  /// De-energised.
-  @JsonValue('OFF')
-  off,
+  /// What is measured: `temperature`, `humidity`, `motion`, `illuminance`, `co2`.
+  final String metric;
 
-  /// Unknown or unreadable (offline device).
-  @JsonValue('UNKNOWN')
-  unknown,
+  /// The number.
+  final double value;
+
+  /// Unit symbol. Unitless metrics use an empty string.
+  final String unit;
+
+  /// When the backend took the reading.
+  final DateTime? recordedAt;
+
+  /// Parses from the wire.
+  factory SensorReading.fromJson(Map<String, Object?> json) => SensorReading(
+        metric: (json['metric'] ?? 'value') as String,
+        value: (json['value'] as num?)?.toDouble() ?? 0,
+        unit: (json['unit'] ?? '') as String,
+        recordedAt: json['recorded_at'] is String
+            ? DateTime.tryParse(json['recorded_at']! as String)
+            : null,
+      );
+
+  /// Serialises.
+  Map<String, Object?> toJson() => <String, Object?>{
+        'metric': metric,
+        'value': value,
+        'unit': unit,
+        'recorded_at': recordedAt?.toIso8601String(),
+      };
+
+  /// The value with its unit, e.g. `24.5 °C`.
+  String get display => unit.isEmpty
+      ? value.toStringAsFixed(value == value.roundToDouble() ? 0 : 1)
+      : '${value.toStringAsFixed(1)} $unit';
 }
 
-/// Physical quantity reported by a sensor.
-enum SensorKind {
-  /// Degrees Celsius.
-  @JsonValue('TEMPERATURE')
-  temperature,
-
-  /// Relative humidity percentage.
-  @JsonValue('HUMIDITY')
-  humidity,
-
-  /// Motion detected flag.
-  @JsonValue('MOTION')
-  motion,
-
-  /// Door/window contact flag.
-  @JsonValue('CONTACT')
-  contact,
-
-  /// Battery percentage.
-  @JsonValue('BATTERY')
-  battery,
-
-  /// Instantaneous power in watts.
-  @JsonValue('POWER')
-  power,
-
-  /// Anything else.
-  @JsonValue('OTHER')
-  other,
-}
-
-/// One relay channel of a device.
-@freezed
-abstract class Relay with _$Relay {
-  /// Creates a relay channel.
-  const factory Relay({
-    required String id,
-    required String label,
-    @Default(RelayState.unknown) RelayState state,
-    required DateTime lastChangedAt,
-    @JsonKey(fromJson: riskTierFromJson, toJson: riskTierToJson)
-    @Default(RiskTier.medium)
-    RiskTier riskTier,
-    @Default(false) bool isMomentary,
-  }) = _Relay;
-
-  /// Creates a relay from wire JSON.
-  factory Relay.fromJson(Map<String, dynamic> json) => _$RelayFromJson(json);
-}
-
-/// One sensor readout of a device.
-@freezed
-abstract class SensorReading with _$SensorReading {
-  /// Creates a sensor reading.
-  const factory SensorReading({
-    required String id,
-    required String label,
-    required SensorKind kind,
-    required double value,
-    required String unit,
-    required DateTime updatedAt,
-    @Default(false) bool isStale,
-  }) = _SensorReading;
-
-  /// Creates a reading from wire JSON.
-  factory SensorReading.fromJson(Map<String, dynamic> json) => _$SensorReadingFromJson(json);
-}
-
-/// An ESP32 node managed by A.R.M.X.
-@freezed
-abstract class ArmxDevice with _$ArmxDevice {
+/// A controllable or readable device.
+@immutable
+class ArmxDevice {
   /// Creates a device.
-  const factory ArmxDevice({
-    required String id,
-    required String name,
-    required String site,
-    @JsonKey(unknownEnumValue: DeviceKind.other) @Default(DeviceKind.other) DeviceKind kind,
-    @Default(false) bool online,
-    @JsonKey(fromJson: riskTierFromJson, toJson: riskTierToJson)
-    @Default(RiskTier.medium)
-    RiskTier riskTier,
-    @Default('unknown') String firmware,
-    required DateTime lastSeenAt,
-    @Default(<Relay>[]) List<Relay> relays,
-    @Default(<SensorReading>[]) List<SensorReading> sensors,
-    @Default(<String, String>{}) Map<String, String> tags,
-  }) = _ArmxDevice;
+  const ArmxDevice({
+    required this.id,
+    required this.name,
+    required this.kind,
+    required this.roomId,
+    required this.online,
+    this.level,
+    this.brightness,
+    this.reading,
+    this.firmwareVersion,
+    this.lastSeenAt,
+    this.controllableByCurrentUser = true,
+  });
 
-  const ArmxDevice._();
+  /// Stable identifier.
+  final String id;
 
-  /// Creates a device from wire JSON.
-  factory ArmxDevice.fromJson(Map<String, dynamic> json) => _$ArmxDeviceFromJson(json);
+  /// Display name, owner-supplied.
+  final String name;
 
-  /// True when the node reported in the last 90 seconds.
-  bool get isLikelyOnline =>
-      online && DateTime.now().difference(lastSeenAt).inSeconds.abs() < 90;
+  /// What it is.
+  final DeviceKind kind;
 
-  /// Relay currently energised, if any (used by the dashboard quick actions).
-  Relay? get primaryRelay => relays.isEmpty ? null : relays.first;
+  /// Owning room.
+  final String roomId;
+
+  /// Whether the backend can currently reach it. A device that is offline is **not**
+  /// rendered as "off" — that distinction is the whole point of this flag.
+  final bool online;
+
+  /// On/off for switch-like devices.
+  final bool? level;
+
+  /// 0–100 brightness for dimmable lights, or speed for fans.
+  final int? brightness;
+
+  /// Latest reading for sensors.
+  final SensorReading? reading;
+
+  /// Reported firmware version, shown on the detail page.
+  final String? firmwareVersion;
+
+  /// Last successful contact.
+  final DateTime? lastSeenAt;
+
+  /// False when the current role may see but not command this device (a VIP-only lock,
+  /// for example). The control is rendered disabled **with a reason**, never hidden.
+  final bool controllableByCurrentUser;
+
+  /// Parses from the wire.
+  factory ArmxDevice.fromJson(Map<String, Object?> json) => ArmxDevice(
+        id: json['id']! as String,
+        name: (json['name'] ?? 'Device') as String,
+        kind: DeviceKind.fromWire(json['kind'] as String?),
+        roomId: (json['room_id'] ?? json['roomId'] ?? 'unassigned') as String,
+        online: json['online'] == true,
+        level: json['level'] as bool?,
+        brightness: (json['brightness'] as num?)?.toInt(),
+        reading: json['reading'] is Map<String, Object?>
+            ? SensorReading.fromJson(json['reading']! as Map<String, Object?>)
+            : null,
+        firmwareVersion: json['firmware_version'] as String?,
+        lastSeenAt: json['last_seen_at'] is String
+            ? DateTime.tryParse(json['last_seen_at']! as String)
+            : null,
+        controllableByCurrentUser: json['controllable'] != false,
+      );
+
+  /// Serialises.
+  Map<String, Object?> toJson() => <String, Object?>{
+        'id': id,
+        'name': name,
+        'kind': kind.name,
+        'room_id': roomId,
+        'online': online,
+        'level': level,
+        'brightness': brightness,
+        'reading': reading?.toJson(),
+        'firmware_version': firmwareVersion,
+        'last_seen_at': lastSeenAt?.toIso8601String(),
+        'controllable': controllableByCurrentUser,
+      };
+
+  /// Copy with changes.
+  ArmxDevice copyWith({
+    String? id,
+    String? name,
+    DeviceKind? kind,
+    String? roomId,
+    bool? online,
+    bool? level,
+    int? brightness,
+    SensorReading? reading,
+    String? firmwareVersion,
+    DateTime? lastSeenAt,
+    bool? controllableByCurrentUser,
+  }) =>
+      ArmxDevice(
+        id: id ?? this.id,
+        name: name ?? this.name,
+        kind: kind ?? this.kind,
+        roomId: roomId ?? this.roomId,
+        online: online ?? this.online,
+        level: level ?? this.level,
+        brightness: brightness ?? this.brightness,
+        reading: reading ?? this.reading,
+        firmwareVersion: firmwareVersion ?? this.firmwareVersion,
+        lastSeenAt: lastSeenAt ?? this.lastSeenAt,
+        controllableByCurrentUser:
+            controllableByCurrentUser ?? this.controllableByCurrentUser,
+      );
+
+  /// True when the device is on (lights, fans, plugs) or unlocked (locks).
+  bool get isActive => level ?? false;
+
+  @override
+  bool operator ==(Object other) =>
+      other is ArmxDevice &&
+      other.id == id &&
+      other.name == name &&
+      other.kind == kind &&
+      other.roomId == roomId &&
+      other.online == online &&
+      other.level == level &&
+      other.brightness == brightness &&
+      other.reading?.value == reading?.value &&
+      other.controllableByCurrentUser == controllableByCurrentUser;
+
+  @override
+  int get hashCode => Object.hash(
+        id,
+        name,
+        kind,
+        roomId,
+        online,
+        level,
+        brightness,
+        reading?.value,
+        controllableByCurrentUser,
+      );
 }
 
-/// Result of sending a command to a device.
-@freezed
-abstract class DeviceCommandResult with _$DeviceCommandResult {
-  /// Creates a command result.
-  const factory DeviceCommandResult({
-    required String deviceId,
-    required bool accepted,
-    required DateTime at,
-    @Default('') String message,
-    String? commandId,
-  }) = _DeviceCommandResult;
+/// A room groups devices and gives the smart-home grid its sections.
+@immutable
+class ArmxRoom {
+  /// Creates a room.
+  const ArmxRoom({
+    required this.id,
+    required this.name,
+    this.floor,
+    this.icon,
+  });
 
-  /// Creates a result from wire JSON.
-  factory DeviceCommandResult.fromJson(Map<String, dynamic> json) =>
-      _$DeviceCommandResultFromJson(json);
+  /// Stable identifier.
+  final String id;
+
+  /// Display name.
+  final String name;
+
+  /// Optional floor label used to group rooms on wide layouts.
+  final String? floor;
+
+  /// Optional icon name the client maps to a glyph.
+  final String? icon;
+
+  /// Parses from the wire.
+  factory ArmxRoom.fromJson(Map<String, Object?> json) => ArmxRoom(
+        id: json['id']! as String,
+        name: (json['name'] ?? 'Room') as String,
+        floor: json['floor'] as String?,
+        icon: json['icon'] as String?,
+      );
+
+  /// Serialises.
+  Map<String, Object?> toJson() => <String, Object?>{
+        'id': id,
+        'name': name,
+        'floor': floor,
+        'icon': icon,
+      };
+
+  @override
+  bool operator ==(Object other) =>
+      other is ArmxRoom && other.id == id && other.name == name;
+
+  @override
+  int get hashCode => Object.hash(id, name);
+}
+
+/// The outcome of a device command, reported by the backend.
+///
+/// There is no optimistic success here: the UI shows [accepted] as *pending* until the
+/// device state event confirms it, and shows [message] verbatim on refusal.
+@immutable
+class DeviceCommandResult {
+  /// Creates a result.
+  const DeviceCommandResult({
+    required this.deviceId,
+    required this.command,
+    required this.accepted,
+    this.pending = false,
+    this.message,
+    this.state,
+  });
+
+  /// Target device.
+  final String deviceId;
+
+  /// Command that was sent.
+  final String command;
+
+  /// Whether the backend accepted it.
+  final bool accepted;
+
+  /// True when the backend accepted it but the device has not confirmed yet. The UI must
+  /// render this as "pending", never as success.
+  final bool pending;
+
+  /// Human-readable detail, shown as-is when present.
+  final String? message;
+
+  /// Resulting device state, when the backend already knows it.
+  final ArmxDevice? state;
+
+  /// Parses from the wire.
+  factory DeviceCommandResult.fromJson(Map<String, Object?> json) =>
+      DeviceCommandResult(
+        deviceId: json['device_id']! as String,
+        command: (json['command'] ?? '') as String,
+        accepted: json['accepted'] == true,
+        pending: json['pending'] == true,
+        message: json['message'] as String?,
+        state: json['state'] is Map<String, Object?>
+            ? ArmxDevice.fromJson(json['state']! as Map<String, Object?>)
+            : null,
+      );
 }

@@ -1,4 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
 <!-- Copyright (c) 2026 Md. Moshiur Rahman Mohi / THAMJJ13.TOP. Proprietary. All Rights Reserved. -->
+<!-- The ink plate plus the accent orb's glow, so the launch window already looks like the app.
+     Drawn as a vector: no bitmaps, so the same file serves every density and no PNG can go
+     stale in the repository. -->
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
-    <item android:drawable="@android:color/black" />
+    <item android:drawable="@color/armx_ink" />
+    <item android:gravity="center" android:width="96dp" android:height="96dp">
+        <shape android:shape="oval">
+            <solid android:color="#101935" />
+            <stroke android:width="2dp" android:color="#5B8CFF" />
+        </shape>
+    </item>
+    <item android:gravity="center" android:width="34dp" android:height="34dp">
+        <shape android:shape="oval">
+            <gradient
+                android:type="linear"
+                android:angle="45"
+                android:startColor="#5B8CFF"
+                android:endColor="#8B5CF6" />
+        </shape>
+    </item>
 </layer-list>

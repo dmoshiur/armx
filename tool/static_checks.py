@@ -1,514 +1,1053 @@
 #!/usr/bin/env python3
 # Copyright (c) 2026 Md. Moshiur Rahman Mohi / THAMJJ13.TOP. Proprietary. All Rights Reserved.
-#
-# Offline source sanity checks for the A.R.M.X AI client.
-#
-# This script is a *supplement* to `flutter analyze` + `flutter test`, never a replacement.
-# It catches the structural mistakes an analyzer would catch (missing files, unresolved
-# imports, undefined types, unused imports, unknown localization keys, unbalanced brackets,
-# missing licence headers, hardcoded secrets, cleartext URLs) in environments where the
-# Flutter SDK and pub.dev are unreachable. See docs/verification.md.
-#
-# Usage:
-#   python3 tool/static_checks.py            # full output
-#   python3 tool/static_checks.py --quiet    # failures and notes only
+"""Offline structural checks for A.R.M.X AI.
+
+Runs anywhere, with no Flutter SDK and no network. It catches the classes of defect that
+`flutter analyze` would otherwise catch structurally, plus the project's own conventions:
+
+1. licence header on every source file;
+2. balanced brackets per Dart file (comment- and string-aware);
+3. every relative `import` / `export` / `part` target exists;
+4. every `l10n.<key>` reference exists in `app_en.arb`, and EN/BN have identical keys and
+   identical placeholders;
+5. no hardcoded secrets and no cleartext `http://` in `lib/`;
+6. no `part '*.g.dart'` / `part '*.freezed.dart'` (the project is codegen-free);
+7. no `Platform.isAndroid` / `Platform.isIOS` layout branching in `lib/`.
+
+Exit code 0 means all checks passed. Usage: `python3 tool/static_checks.py [--quiet]`.
+"""
 
 from __future__ import annotations
 
-import argparse
 import json
 import os
 import re
-import subprocess
 import sys
-from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
-BASELINE_COMMIT = "676dc0c83ce9907f931523f67ab1ab26d1b05ad8"
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+LIB = os.path.join(ROOT, "lib")
+ARB_EN = os.path.join(LIB, "l10n", "app_en.arb")
+ARB_BN = os.path.join(LIB, "l10n", "app_bn.arb")
 
-HEADER = (
-    "Copyright (c) 2026 Md. Moshiur Rahman Mohi / THAMJJ13.TOP. Proprietary. "
-    "All Rights Reserved."
+HEADER = "Copyright (c) 2026 Md. Moshiur Rahman Mohi / THAMJJ13.TOP"
+
+HEADER_REQUIRED_SUFFIXES = (
+    ".dart",
+    ".kt",
+    ".xml",
+    ".gradle",
+    ".yaml",
+    ".yml",
+    ".py",
 )
-HEADER_EXEMPT = {
-    "assets/fonts/OFL-Inter.txt",
-    "assets/fonts/OFL-JetBrainsMono.txt",
-    "assets/images/README.md",
-    "assets/models/README.md",
-}
-SOURCE_SUFFIXES = {".dart", ".kt", ".xml", ".yaml", ".arb", ".gradle"}
-SOURCE_ROOTS = ("lib", "test", "integration_test", "android", "tool")
+HEADER_EXEMPT_NAMES = (
+    "gradle-wrapper.properties",
+    "gradlew",
+    "gradlew.bat",
+    "local.properties",
+)
+HEADER_EXEMPT_DIRS = (".git", ".dart_tool", "build", ".gradle", "l10n\\generated",
+                      "l10n/generated", "ephemeral")
 
-failures: list[str] = []
+SECRET_PATTERNS = [
+    (re.compile(r"""(?i)\b(api[_-]?key|secret|client[_-]?secret|private[_-]?key)\s*[:=]\s*['"][^'"]{8,}['"]"""),
+     "possible hardcoded secret"),
+    (re.compile(r"-----BEGIN [A-Z ]*PRIVATE KEY-----"), "embedded private key"),
+    (re.compile(r"""['"]https?://[^'"]*:[^'"]*@"""), "credentials inside a URL"),
+]
+CLEARTEXT_RE = re.compile(r"""['"]http://(?!localhost|127\.0\.0\.1|10\.0\.2\.2)[^'"]*['"]""")
+PLATFORM_BRANCH_RE = re.compile(r"Platform\.is(Android|IOS|MacOS|Windows|Linux)\b")
+PART_CODEGEN_RE = re.compile(r"""part\s+['"][^'"]*\.(g|freezed)\.dart['"]""")
+
+# Imports that are expected to resolve only after `flutter pub get`.
+PACKAGE_PREFIXES = ("package:", "dart:")
+
+errors: list[str] = []
 notes: list[str] = []
 
 
-def fail(path: Path | str, message: str) -> None:
-    failures.append(f"{path}: {message}")
+def rel(path: str) -> str:
+    return os.path.relpath(path, ROOT).replace(os.sep, "/")
 
 
-def rel(path: Path) -> str:
-    return str(path.relative_to(ROOT))
+def usage_files():
+    """Every file whose *use* of the API is checked: the library and its tests."""
+    for base in (LIB, os.path.join(ROOT, "test"), os.path.join(ROOT, "integration_test")):
+        if os.path.isdir(base):
+            yield from iter_files(base, (".dart",))
 
 
-def dart_files() -> list[Path]:
-    return sorted(p for p in (ROOT / "lib").rglob("*.dart"))
+def iter_files(base: str, suffixes: tuple[str, ...] | None = None):
+    for dirpath, dirnames, filenames in os.walk(base):
+        dirnames[:] = [
+            d for d in dirnames
+            if d not in {"build", ".dart_tool", ".gradle", "ephemeral", ".idea"}
+        ]
+        for name in filenames:
+            if suffixes is None or name.endswith(suffixes):
+                yield os.path.join(dirpath, name)
 
 
-def strip_dart_code(source: str) -> str:
-    """Removes comments and string literals so bracket/symbol checks see only code."""
-    out: list[str] = []
+def check_headers() -> None:
+    for base in (LIB, os.path.join(ROOT, "android"), os.path.join(ROOT, "test"),
+                 os.path.join(ROOT, "integration_test"), os.path.join(ROOT, "tool")):
+        if not os.path.isdir(base):
+            continue
+        for path in iter_files(base, HEADER_REQUIRED_SUFFIXES):
+            name = os.path.basename(path)
+            if name in HEADER_EXEMPT_NAMES:
+                continue
+            if any(part in os.path.join(path) for part in HEADER_EXEMPT_DIRS):
+                continue
+            with open(path, encoding="utf-8") as handle:
+                head = handle.read(600)
+            if HEADER not in head:
+                errors.append(f"missing licence header: {rel(path)}")
+    for extra in (".gitignore", "README.md", ".github/workflows/ci.yml", "pubspec.yaml",
+                  "analysis_options.yaml", "l10n.yaml"):
+        path = os.path.join(ROOT, extra)
+        if os.path.exists(path):
+            with open(path, encoding="utf-8") as handle:
+                if HEADER not in handle.read(800):
+                    errors.append(f"missing licence header: {extra}")
+
+
+def strip_dart(source: str) -> str:
+    """Remove comments and string bodies so bracket counting is not fooled."""
+    out = []
     i = 0
-    length = len(source)
-    while i < length:
+    n = len(source)
+    while i < n:
         ch = source[i]
-        nxt = source[i + 1] if i + 1 < length else ""
+        nxt = source[i + 1] if i + 1 < n else ""
         if ch == "/" and nxt == "/":
-            while i < length and source[i] != "\n":
+            while i < n and source[i] != "\n":
                 i += 1
             continue
         if ch == "/" and nxt == "*":
-            depth = 1
             i += 2
-            while i < length and depth:
-                if source[i] == "/" and i + 1 < length and source[i + 1] == "*":
-                    depth += 1
-                    i += 2
-                    continue
-                if source[i] == "*" and i + 1 < length and source[i + 1] == "/":
-                    depth -= 1
-                    i += 2
-                    continue
+            while i + 1 < n and not (source[i] == "*" and source[i + 1] == "/"):
                 i += 1
+            i += 2
             continue
-        if ch in "'\"" or (ch == "r" and nxt in "'\""):
-            raw = ch == "r"
-            if raw:
-                i += 1
-                ch = source[i]
+        if ch in ("'", '"'):
             quote = ch
-            triple = source[i : i + 3] == quote * 3
+            triple = source[i:i + 3] == quote * 3
             i += 3 if triple else 1
-            while i < length:
-                if source[i] == "\\" and not raw:
+            while i < n:
+                if source[i] == "\\":
                     i += 2
                     continue
-                # Keep interpolation expressions: `'${Foo.bar()}'` really does reference Foo.
-                if source[i] == "$" and not raw:
-                    if i + 1 < length and source[i + 1] == "{":
-                        depth = 1
-                        j = i + 2
-                        while j < length and depth:
-                            if source[j] == "{":
-                                depth += 1
-                            elif source[j] == "}":
-                                depth -= 1
-                            j += 1
-                        out.append(" " + source[i + 2 : j - 1] + " ")
-                        i = j
-                        continue
-                    if i + 1 < length and (source[i + 1].isalpha() or source[i + 1] == "_"):
-                        j = i + 1
-                        while j < length and (source[j].isalnum() or source[j] == "_"):
-                            j += 1
-                        out.append(" " + source[i + 1 : j] + " ")
-                        i = j
-                        continue
                 if triple:
-                    if source[i : i + 3] == quote * 3:
+                    if source[i:i + 3] == quote * 3:
                         i += 3
                         break
                 elif source[i] == quote:
                     i += 1
                     break
-                if source[i] == "\n" and not triple:
-                    break
                 i += 1
-            out.append(" _ ")
+            out.append('""')
             continue
         out.append(ch)
         i += 1
     return "".join(out)
 
 
-# ---------------------------------------------------------------------------------------
-# Headers
-# ---------------------------------------------------------------------------------------
+_STRIPPED_CACHE: dict[str, str] = {}
 
 
-def check_headers() -> None:
-    for root in SOURCE_ROOTS:
-        base = ROOT / root
-        if not base.exists():
-            continue
-        for path in sorted(base.rglob("*")):
-            if not path.is_file() or path.suffix not in SOURCE_SUFFIXES:
-                continue
-            relative = rel(path)
-            if relative in HEADER_EXEMPT or path.suffix in {".arb", ".json"}:
-                continue  # JSON cannot carry comments
-            if "generated" in path.parts or "build" in path.parts:
-                continue
-            try:
-                head = path.read_text(encoding="utf-8")[:2000]
-            except UnicodeDecodeError:
-                continue
-            if HEADER not in head:
-                fail(relative, "missing copyright header")
+def stripped(path: str) -> str:
+    """`strip_dart(source)` with the file read cached.
+
+    Several checks walk the whole tree, and each pass is pure, so reading and stripping once
+    keeps a full run to a couple of seconds instead of thirty.
+    """
+    cached = _STRIPPED_CACHE.get(path)
+    if cached is None:
+        with open(path, encoding="utf-8") as handle:
+            cached = strip_dart(handle.read())
+        _STRIPPED_CACHE[path] = cached
+    return cached
 
 
-# ---------------------------------------------------------------------------------------
-# Brackets
-# ---------------------------------------------------------------------------------------
-
-
-def check_brackets() -> None:
-    pairs = {")": "(", "]": "[", "}": "{"}
-    for path in dart_files():
-        code = strip_dart_code(path.read_text(encoding="utf-8"))
-        stack: list[str] = []
-        for ch in code:
-            if ch in "([{":
-                stack.append(ch)
-            elif ch in ")]}":
-                if not stack or stack[-1] != pairs[ch]:
-                    fail(rel(path), f"unbalanced '{ch}'")
-                    break
-                stack.pop()
-        else:
-            if stack:
-                fail(rel(path), f"unclosed brackets: {''.join(stack)}")
-
-
-# ---------------------------------------------------------------------------------------
-# Imports
-# ---------------------------------------------------------------------------------------
-
-
-def is_generated_target(target: str) -> bool:
-    """build_runner / gen-l10n outputs are intentionally not committed."""
-    return (
-        target.endswith(".g.dart")
-        or target.endswith(".freezed.dart")
-        or "l10n/generated/" in target
-    )
+def check_brackets_and_codegen() -> None:
+    for path in iter_files(LIB, (".dart",)):
+        with open(path, encoding="utf-8") as handle:
+            source = handle.read()
+        if PART_CODEGEN_RE.search(source):
+            errors.append(f"codegen part directive (project is codegen-free): {rel(path)}")
+        cleaned = strip_dart(source)
+        for opener, closer, label in (("{", "}", "braces"), ("(", ")", "parens"),
+                                      ("[", "]", "brackets")):
+            delta = cleaned.count(opener) - cleaned.count(closer)
+            if delta != 0:
+                errors.append(f"unbalanced {label} ({delta:+d}) in {rel(path)}")
 
 
 def check_imports() -> None:
-    pattern = re.compile(r"""^\s*(?:import|export|part)\s+['"]([^'"]+)['"]""", re.MULTILINE)
-    for path in dart_files():
-        source = path.read_text(encoding="utf-8")
-        for target in pattern.findall(source):
-            if is_generated_target(target):
+    import_re = re.compile(r"""^\s*(?:import|export|part)\s+['"]([^'"]+)['"]""", re.M)
+    for path in iter_files(LIB, (".dart",)):
+        with open(path, encoding="utf-8") as handle:
+            source = handle.read()
+        for target in import_re.findall(source):
+            if target.startswith(PACKAGE_PREFIXES):
                 continue
-            if target.startswith("package:armx_ai/"):
-                resolved = ROOT / "lib" / target[len("package:armx_ai/") :]
-            elif target.startswith(("package:", "dart:")):
+            if 'l10n/generated' in target.replace(os.sep, '/'):
+                # Emitted by `flutter gen-l10n`; absent until the first pub get.
                 continue
-            else:
-                resolved = (path.parent / target).resolve()
-            if not resolved.exists():
-                fail(rel(path), f"unresolved target '{target}'")
+            resolved = os.path.normpath(os.path.join(os.path.dirname(path), target))
+            if not os.path.exists(resolved):
+                errors.append(f"unresolved import '{target}' in {rel(path)}")
 
 
-# ---------------------------------------------------------------------------------------
-# Localization
-# ---------------------------------------------------------------------------------------
+def load_arb(path: str) -> dict:
+    with open(path, encoding="utf-8") as handle:
+        return json.load(handle)
 
 
-def check_localization() -> None:
-    en_path = ROOT / "lib" / "l10n" / "app_en.arb"
-    bn_path = ROOT / "lib" / "l10n" / "app_bn.arb"
-    try:
-        en = json.loads(en_path.read_text(encoding="utf-8"))
-        bn = json.loads(bn_path.read_text(encoding="utf-8"))
-    except json.JSONDecodeError as error:
-        fail("lib/l10n", f"invalid ARB JSON: {error}")
-        return
+def check_l10n() -> None:
+    en = load_arb(ARB_EN)
+    bn = load_arb(ARB_BN)
+    en_keys = {k for k in en if not k.startswith("@")}
+    bn_keys = {k for k in bn if not k.startswith("@")}
 
-    en_keys = {key for key in en if not key.startswith("@")}
-    bn_keys = {key for key in bn if not key.startswith("@")}
     for missing in sorted(en_keys - bn_keys):
-        fail("lib/l10n/app_bn.arb", f"missing translation for '{missing}'")
+        errors.append(f"app_bn.arb is missing key '{missing}'")
     for extra in sorted(bn_keys - en_keys):
-        fail("lib/l10n/app_bn.arb", f"key '{extra}' is not in the template file")
+        errors.append(f"app_bn.arb has key '{extra}' that app_en.arb does not")
 
-    for key in sorted(en_keys):
-        value = en[key]
-        if not isinstance(value, str):
-            continue
-        placeholders = set(re.findall(r"\{([a-zA-Z_][a-zA-Z0-9_]*)\}", value))
-        declared = set((en.get("@" + key, {}) or {}).get("placeholders", {}))
-        undeclared = placeholders - declared
-        if undeclared:
-            fail("lib/l10n/app_en.arb", f"'{key}' uses undeclared placeholders {sorted(undeclared)}")
-        bn_placeholders = set(re.findall(r"\{([a-zA-Z_][a-zA-Z0-9_]*)\}", bn.get(key, "")))
-        if placeholders != bn_placeholders:
-            fail(
-                "lib/l10n/app_bn.arb",
-                f"'{key}' placeholder mismatch {sorted(bn_placeholders)} != {sorted(placeholders)}",
+    placeholder_re = re.compile(r"\{(\w+)\}")
+    for key in sorted(en_keys & bn_keys):
+        en_placeholders = set(placeholder_re.findall(en[key]))
+        meta = en.get(f"@{key}", {})
+        declared = set(meta.get("placeholders", {})) if isinstance(meta, dict) else set()
+        if declared and declared != en_placeholders:
+            errors.append(
+                f"'{key}': @-metadata placeholders {sorted(declared)} "
+                f"!= body placeholders {sorted(en_placeholders)}"
+            )
+        if en_placeholders != set(placeholder_re.findall(bn[key])):
+            errors.append(
+                f"'{key}': EN placeholders {sorted(en_placeholders)} "
+                f"!= BN placeholders {sorted(placeholder_re.findall(bn[key]))}"
+            )
+        if not str(bn[key]).strip():
+            errors.append(f"'{key}': empty Bengali translation")
+        # A Bengali string that is byte-identical to English is usually an oversight —
+        # except for words that are legitimately the same in both languages.
+        if str(bn[key]) == str(en[key]) and key not in ALLOWED_IDENTICAL:
+            notes.append(f"'{key}': BN equals EN (verify this is intentional)")
+
+    referenced: set[str] = set()
+    # Require a member access that is not preceded by another identifier character and is
+    # not a file extension: `l10n.loginTitle` counts, `l10n.dart` and `l10n.<key>` do not.
+    # A preceding dot is *expected* (`context.l10n.loginTitle`); only a preceding
+    # identifier character means this is not a member access at all. Import lines such as
+    # `l10n/l10n.dart` are excluded because they have no dot after `l10n`.
+    key_re = re.compile(r"(?<![A-Za-z0-9_])l10n\.(?!dart\b)([a-z][A-Za-z0-9]*)")
+    for path in iter_files(LIB, (".dart",)):
+        with open(path, encoding="utf-8") as handle:
+            source = strip_dart(handle.read())
+        referenced.update(key_re.findall(source))
+        referenced.update(
+            re.findall(r"AppLocalizations\.of\([^)]*\)\.([a-z][A-Za-z0-9]*)", source)
+        )
+    for key in sorted(referenced - en_keys):
+        errors.append(f"l10n key referenced in code but absent from app_en.arb: '{key}'")
+
+
+ALLOWED_IDENTICAL = {
+    # Brand / product names and language-neutral tokens that must not be translated.
+    "appName", "appWordmark", "roleAdmin", "roleVip", "roleUser",
+    "riskLow", "riskMedium", "riskHigh", "settingsLanguageEnglish",
+    "settingsLanguageBengali",
+}
+
+
+def check_secrets_and_reachability() -> None:
+    for path in iter_files(LIB, (".dart",)):
+        with open(path, encoding="utf-8") as handle:
+            # Comments are stripped first: a doc comment that *names* a forbidden pattern
+            # (this repo documents its own rules) is not a violation.
+            source = strip_dart(handle.read())
+        for pattern, label in SECRET_PATTERNS:
+            if pattern.search(source):
+                errors.append(f"{label} in {rel(path)}")
+        for match in CLEARTEXT_RE.findall(source):
+            errors.append(f"cleartext URL '{match}' in {rel(path)}")
+        for match in PLATFORM_BRANCH_RE.findall(source):
+            errors.append(
+                f"platform-based branching (Platform.is{match}) in {rel(path)} — "
+                "layout must branch on Breakpoint, capability on PlatformCapabilities"
             )
 
-    key_re = re.compile(r"(?:\bl10n|\.l10n)\.([a-z][A-Za-z0-9]*)\b(?!['\"])")
-    ignored = {"of", "delegate", "localeName", "locale", "supportedLocales", "maybeOf", "dart"}
-    for path in dart_files():
-        if "l10n/generated" in rel(path):
+
+
+DECL_RE = re.compile(
+    r"^(?:abstract\s+|sealed\s+|final\s+|base\s+|interface\s+|mixin\s+)*"
+    r"(?:class|enum|mixin|extension|typedef)\s+([A-Za-z_][A-Za-z0-9_]*)",
+    re.M,
+)
+FUNC_RE = re.compile(r"^[A-Za-z][A-Za-z0-9_<>,?\s]*\s([A-Za-z_][A-Za-z0-9_]*)\s*\(", re.M)
+# Top-level variables matter as much as types: `armxApiProvider` and `Routes` are the two
+# most-imported names in the app, and missing them would make this check scream falsely.
+VAR_RE = re.compile(
+    # Declarations wrap across lines constantly in this codebase
+    # (`final NotifierProvider<Foo, Bar>\n    fooProvider = …`), so the name may be up to a
+    # couple of lines after the keyword.
+    r"^(?:final|const|var|late)\s+[\s\S]{0,160}?\b([A-Za-z_][A-Za-z0-9_]*)\s*(?:=|;)",
+    re.M,
+)
+EXPORT_RE = re.compile(r"""^export\s+['"]([^'"]+)['"]""", re.M)
+
+
+def _declared_names(path: str, seen: set[str] | None = None) -> tuple[set[str], bool]:
+    """Top-level names a file makes available, plus whether it declares an extension.
+
+    Extensions are reported separately because an import that only supplies one is used by
+    its *members*, not by its name — flagging those would produce a wall of false positives.
+    """
+    seen = seen or set()
+    if path in seen or not os.path.isfile(path):
+        return set(), False
+    seen.add(path)
+    with open(path, encoding="utf-8") as handle:
+        source = handle.read()
+
+    names = set(DECL_RE.findall(source))
+    has_extension = "extension " in source
+    names.update(FUNC_RE.findall(source))
+    names.update(VAR_RE.findall(source))
+    for target in EXPORT_RE.findall(source):
+        if target.startswith("package:") or target.startswith("dart:"):
             continue
-        for match in key_re.findall(path.read_text(encoding="utf-8")):
-            if match in ignored or match in en_keys:
+        child = os.path.normpath(os.path.join(os.path.dirname(path), target))
+        child_names, child_extension = _declared_names(child, seen)
+        names.update(child_names)
+        has_extension = has_extension or child_extension
+    return names, has_extension
+
+
+def check_unused_imports() -> None:
+    """Flag relative imports whose exported names are never mentioned.
+
+    This is a heuristic stand-in for `dart analyze` (which cannot run offline), so it is
+    deliberately conservative: it skips package imports, generated localizations, files that
+    export extensions, and it searches the raw source — a type referenced only from a doc
+    comment counts as used.
+    """
+    for path in iter_files(LIB, (".dart",)):
+        with open(path, encoding="utf-8") as handle:
+            source = handle.read()
+        body_start = 0
+        for match in re.finditer(r"^import\s+'[^']+';", source, re.M):
+            body_start = match.end()
+        body = source[body_start:]
+        for target in re.findall(r"^import\s+'([^']+)';", source, re.M):
+            if target.startswith("package:") or target.startswith("dart:"):
                 continue
-            fail(rel(path), f"unknown localization key 'l10n.{match}'")
+            if "l10n/generated" in target:
+                continue
+            resolved = os.path.normpath(os.path.join(os.path.dirname(path), target))
+            names, has_extension = _declared_names(resolved)
+            if has_extension or not names:
+                continue
+            if not any(re.search(r"\b%s\b" % re.escape(name), body) for name in names):
+                errors.append(
+                    f"unused relative import '{target}' in {rel(path)}"
+                )
 
 
-# ---------------------------------------------------------------------------------------
-# Secrets and transport hygiene
-# ---------------------------------------------------------------------------------------
+
+def _classes_and_counts() -> tuple[dict[str, set[str]], dict[str, int]]:
+    """Member sets per class name, and how many files declare each name."""
+    members: dict[str, set[str]] = {}
+    counts: dict[str, int] = {}
+    for path in iter_files(LIB, (".dart",)):
+        source = stripped(path)
+        for name, found in _model_members(source).items():
+            counts[name] = counts.get(name, 0) + 1
+            members.setdefault(name, set()).update(found)
+    return members, counts
 
 
-def check_secrets_and_transport() -> None:
-    secret_re = re.compile(
-        r"""(?i)(api[_-]?key|secret|passwd|password)\s*[:=]\s*['"][^'"]{8,}['"]"""
-    )
-    allowed = ("test/", "docs/", "tool/static_checks.py")
-    for path in dart_files():
-        relative = rel(path)
-        source = path.read_text(encoding="utf-8")
-        if not relative.startswith(allowed):
-            for match in secret_re.finditer(source):
-                line_no = source[: match.start()].count("\n") + 1
-                fail(relative, f"possible hardcoded secret on line {line_no}")
-        for cleartext in re.findall(r"""['"]http://[^'"]+['"]""", source):
-            fail(relative, f"cleartext URL {cleartext}")
-
-
-# ---------------------------------------------------------------------------------------
-# File budget
-# ---------------------------------------------------------------------------------------
-
-
-def check_file_budget() -> None:
-    for path in dart_files():
-        count = len(path.read_text(encoding="utf-8").splitlines())
-        if count > 320:
-            notes.append(f"{rel(path)}: {count} lines (budget is ~300)")
-
-
-# ---------------------------------------------------------------------------------------
-# Codegen policy (decision 0004)
-# ---------------------------------------------------------------------------------------
-
-
-def preexisting_files() -> set[str]:
-    try:
-        output = subprocess.run(
-            ["git", "ls-tree", "-r", "--name-only", BASELINE_COMMIT],
-            cwd=ROOT,
-            capture_output=True,
-            text=True,
-            check=True,
-        ).stdout
-    except Exception:  # pragma: no cover - git unavailable
-        return set()
-    return {line.strip() for line in output.splitlines() if line.strip()}
-
-
-def check_generated_parts() -> None:
-    baseline = preexisting_files()
-    if not baseline:
-        notes.append("could not read the baseline commit; codegen-part check skipped")
-        return
-    for path in dart_files():
-        relative = rel(path)
-        if relative in baseline:
-            continue
-        if re.search(r"part\s+'[^']*\.(g|freezed)\.dart'", path.read_text(encoding="utf-8")):
-            fail(relative, "new code must not depend on build_runner parts (docs/decisions/0004)")
-
-
-# ---------------------------------------------------------------------------------------
-# Symbol resolution (a poor man's analyzer)
-# ---------------------------------------------------------------------------------------
-
-
-def declared_symbols(source: str) -> set[str]:
-    code = strip_dart_code(source)
+def _project_symbols() -> set[str]:
+    """Every top-level name declared anywhere under `lib/`."""
     symbols: set[str] = set()
-    patterns = (
-        r"\b(?:abstract\s+final\s+class|abstract\s+interface\s+class|final\s+class|sealed\s+class|"
-        r"class|mixin|enum|extension)\s+([A-Z][A-Za-z0-9_]*)",
-        r"\btypedef\s+([A-Z][A-Za-z0-9_]*)",
-        r"^final\s+(?:Provider|FutureProvider|StreamProvider|NotifierProvider|"
-        r"AsyncNotifierProvider)[^=]*?\s([a-z][A-Za-z0-9_]*Provider)\s*=",
-        r"^const\s+([a-zA-Z][A-Za-z0-9_]*)\s*=",
-    )
-    for pattern in patterns:
-        symbols.update(re.findall(pattern, code, re.MULTILINE))
+    for path in iter_files(LIB, (".dart",)):
+        source = stripped(path)
+        symbols.update(DECL_RE.findall(source))
+        symbols.update(VAR_RE.findall(source))
+        symbols.update(FUNC_RE.findall(source))
+        symbols.update(re.findall(r"^\s*(?:static\s+)?(?:const\s+)?(\w+)\s*=", source, re.M))
     return symbols
 
 
-def library_units(sources: dict[str, str]) -> dict[str, set[str]]:
-    units: dict[str, set[str]] = {name: {name} for name in sources}
-    for name, source in sources.items():
-        for target in re.findall(r"part\s+'([^']+\.dart)'", source) + re.findall(
-            r"part\s+of\s+'([^']+\.dart)'", source
+def check_static_references() -> None:
+    """Validates `ClassName.member` against the class that declares it.
+
+    The receiver is written out in full, so there is no guessing: `Routes.smartHomes` or
+    `ArmxStatus.flying` is flagged exactly, and nothing else is. A name declared in more than
+    one file is skipped, because the two declarations may mean different things and the union
+    of their members would accept too much.
+    """
+    members, counts = _classes_and_counts()
+    enum_names = set(_all_enum_members())
+    for name, found in _all_enum_members().items():
+        members.setdefault(name, set()).update(found)
+        counts.setdefault(name, 1)
+
+    # Enums are covered member-by-member by check_api_surface; running both would report the
+    # same mistake twice.
+    checked = {
+        name
+        for name, count in counts.items()
+        if count == 1 and name not in enum_names
+    }
+    patterns = {
+        name: re.compile(r"(?<![\w.])" + re.escape(name) + r"\.([A-Za-z_]\w*)")
+        for name in checked
+    }
+
+    for path in usage_files():
+        relative = rel(path)
+        source = stripped(path)
+        for name, pattern in patterns.items():
+            allowed = members.get(name, set()) | _CORE_MEMBERS | {"new"}
+            for match in pattern.finditer(source):
+                member = match.group(1)
+                if member in allowed:
+                    continue
+                if member in _FRAMEWORK_STATICS.get(name, set()):
+                    continue
+                if name in _SKIP_STATIC_RECEIVERS:
+                    continue
+                line = source.count("\n", 0, match.start()) + 1
+                errors.append(f"{name} has no member '{member}' in {relative}:{line}")
+
+
+def check_provider_names() -> None:
+    """Both halves at once: `*Provider` names, and everything passed to `ref.*`."""
+    """Flags references to riverpod providers that nothing declares.
+
+    Providers are top-level finals named `somethingProvider`. A misspelling is invisible in
+    review and fatal at compile time, and it is the single most common way this kind of tree
+    breaks. Named arguments (`WebSocketClient(tokenProvider: …)`) and the framework's own
+    `Provider` classes are excluded by the casing rule and by the `:` guard.
+    """
+    declared = _project_symbols()
+    pattern = re.compile(r"(?<![\w.\$])([a-z][A-Za-z0-9]*Provider)\b(?!\s*[:=])")
+    for path in usage_files():
+        relative = rel(path)
+        source = stripped(path)
+        body_start = 0
+        for match in re.finditer(r"^import\s+'[^']+';", source, re.M):
+            body_start = match.end()
+        body = source[body_start:]
+        for match in re.finditer(
+            r"\bref\.(?:watch|read|listen|invalidate|refresh|exists)\(\s*"
+            r"([A-Za-z_][A-Za-z0-9_]*)",
+            body,
         ):
-            resolved = os.path.normpath(
-                os.path.join(str(Path(name).parent), target)
-            ).replace(os.sep, "/")
-            if resolved in sources:
-                units[name].add(resolved)
-                units.setdefault(resolved, {resolved}).add(name)
-    return units
-
-
-def check_symbol_resolution() -> None:
-    files = {rel(path): path for path in dart_files()}
-    sources = {name: path.read_text(encoding="utf-8") for name, path in files.items()}
-    units = library_units(sources)
-
-    declarations: dict[str, set[str]] = {}
-    for name, source in sources.items():
-        symbols = declared_symbols(source)
-        annotated_classes = re.findall(
-            r"@Riverpod\([^)]*\)\s*\n(?:@\w+[^\n]*\n)*class\s+([A-Za-z_][A-Za-z0-9_]*)",
-            source,
-        )
-        annotated_functions = re.findall(
-            r"@Riverpod\([^)]*\)\s*\n(?:@\w+[^\n]*\n)*(?:[\w<>?,\[\] ]+\s+)?([a-z][A-Za-z0-9_]*)\s*\(",
-            source,
-        )
-        for decorated in annotated_classes + annotated_functions:
-            # riverpod_generator lower-camel-cases the provider name: `ChatController` ->
-            # `chatControllerProvider`, `appRouter` -> `appRouterProvider`.
-            symbols.add(f"{decorated}Provider")
-            symbols.add(f"{decorated[0].lower()}{decorated[1:]}Provider")
-        declarations[name] = symbols
-
-    def imports_of(name: str) -> list[str]:
-        return re.findall(r"^\s*import\s+['\"]([^'\"]+)['\"]", sources[name], re.MULTILINE)
-
-    def exports_of(name: str) -> list[str]:
-        return re.findall(r"^\s*export\s+['\"]([^'\"]+)['\"]", sources[name], re.MULTILINE)
-
-    def resolve(target: str, from_file: str) -> str | None:
-        if target.startswith("package:armx_ai/"):
-            candidate = "lib/" + target[len("package:armx_ai/") :]
-        elif target.startswith(("dart:", "package:")):
-            return None
-        else:
-            candidate = os.path.normpath(
-                os.path.join(str(Path(from_file).parent), target)
-            ).replace(os.sep, "/")
-        return candidate if candidate in sources else None
-
-    def visible_symbols(name: str) -> set[str]:
-        visible: set[str] = set()
-        queue: list[tuple[str, str]] = []
-        for member in units[name]:
-            queue.extend((target, member) for target in imports_of(member))
-            queue.extend((target, member) for target in exports_of(member))
-        seen: set[str] = set()
-        while queue:
-            target, from_file = queue.pop(0)
-            resolved = resolve(target, from_file)
-            if resolved is None or resolved in seen:
+            name = match.group(1)
+            if name in declared:
                 continue
-            seen.add(resolved)
-            for member in units[resolved]:
-                visible |= declarations[member]
-                queue.extend((exported, member) for exported in exports_of(member))
-                queue.extend((imported, member) for imported in imports_of(member))
-        return visible
-
-    symbol_to_file: dict[str, str] = {}
-    for name, symbols in declarations.items():
-        for symbol in symbols:
-            symbol_to_file.setdefault(symbol, name)
-
-    identifier_re = re.compile(r"\b([A-Za-z_][A-Za-z0-9_]*)\b")
-    for name, source in sources.items():
-        if "l10n/generated" in name or re.search(r"^\s*part\s+of\s+", source, re.MULTILINE):
-            continue
-        body = strip_dart_code(source)
-        body = re.sub(r"^\s*(?:import|export|part)\s+[^;]+;", "", body, flags=re.MULTILINE)
-        used = set(identifier_re.findall(body))
-        local = set().union(*(declarations[member] for member in units[name]))
-        visible = visible_symbols(name)
-
-        for symbol in sorted(used):
-            if symbol in local or symbol.startswith("_"):
-                continue
-            if not (symbol[0].isupper() or symbol.endswith("Provider")):
-                continue
-            owner = symbol_to_file.get(symbol)
-            if owner is None or owner in units[name] or symbol in visible:
-                continue
-            fail(name, f"uses '{symbol}' declared in {owner} without importing it")
-
-        # A part file's usages count for the whole library unit, so imports of the entry
-        # file are matched against everything the unit references.
-        unit_used: set[str] = set(used)
-        for member in units[name]:
-            if member == name:
-                continue
-            member_body = strip_dart_code(sources[member])
-            member_body = re.sub(
-                r"^\s*(?:import|export|part)\s+[^;]+;", "", member_body, flags=re.MULTILINE
+            line = body.count("\n", 0, match.start()) + 1
+            errors.append(
+                f"'{name}' is passed to ref.watch/read but is declared "
+                f"nowhere in {relative}:{line}"
             )
-            unit_used |= set(identifier_re.findall(member_body))
 
-        for target in imports_of(name):
-            resolved = resolve(target, name)
-            if resolved is None or resolved in units[name]:
+        for match in pattern.finditer(body):
+            name = match.group(1)
+            if name in declared:
                 continue
-            if not declarations[resolved]:
+            line_start = body.rfind("\n", 0, match.start()) + 1
+            prefix = body[line_start : match.start()]
+            # `required Future<String?> Function() tokenProvider,` and the initializer-list
+            # `_tokenProvider = tokenProvider,` both *declare* a parameter rather than naming
+            # a provider. A real use is always reached through a call or an assignment whose
+            # receiver is written out (`ref.watch(`, `= xProvider;`, `(xProvider)`).
+            if re.search(r"(required\s+|Function\([^)]*\)\s*|[A-Z]\w*\s+|= )$", prefix):
                 continue
-            if declarations[resolved] & unit_used:
+            if re.match(r"\s*[,)]", body[match.end() :]) and not re.search(
+                r"[.(]$", prefix
+            ):
                 continue
-            if exports_of(resolved):
-                continue  # barrel: contributes transitively
-            if re.search(r"\bextension\b", sources[resolved]):
-                continue  # extension methods are used implicitly
-            fail(name, f"unused import '{target}'")
+            line = body.count("\n", 0, match.start()) + 1
+            errors.append(
+                f"reference to undeclared provider '{name}' in {relative}:{line}"
+            )
 
 
-# ---------------------------------------------------------------------------------------
-# README status table
-# ---------------------------------------------------------------------------------------
+# Static members the framework adds to types this project declares, or that come from a mixin
+# the class uses. Keyed by class name.
+_FRAMEWORK_STATICS: dict[str, set[str]] = {
+    "ArmxColors": {"lerp", "copyWith"},
+    "ArmxTypography": {"lerp"},
+}
+
+# Receivers where `Name.member` is not a static lookup at all: a constructor tear-off or a
+# local shadowing the class name. Kept empty until a real case appears.
+_SKIP_STATIC_RECEIVERS: set[str] = set()
 
 
-def check_readme_status() -> None:
-    readme = (ROOT / "README.md").read_text(encoding="utf-8")
-    for step in range(1, 11):
-        if f"| {step} |" not in readme:
-            notes.append(f"README.md: no status row for step {step}")
+def check_arb_json() -> None:
+    for path in (ARB_EN, ARB_BN):
+        try:
+            load_arb(path)
+        except json.JSONDecodeError as exc:  # pragma: no cover - defensive
+            errors.append(f"{rel(path)} is not valid JSON: {exc}")
+
+
+
+# ---------------------------------------------------------------------------
+# Widget API surface
+#
+# Dart's analyzer cannot run in this environment, so the next best thing is to parse the
+# declarations of our own widgets and enums and compare them against every use site. This
+# catches the class of error the other checks are blind to: calling a widget with an
+# argument it does not have, or naming an enum value that does not exist.
+# ---------------------------------------------------------------------------
+
+WIDGET_BASES = (
+    "StatelessWidget",
+    "StatefulWidget",
+    "ConsumerWidget",
+    "ConsumerStatefulWidget",
+)
+
+_CLASS_RE = re.compile(
+    r"\bclass\s+(\w+)\s+extends\s+(" + "|".join(WIDGET_BASES) + r")\b"
+)
+_ENUM_RE = re.compile(r"\benum\s+(\w+)\s*\{")
+_ANY_CLASS_RE = re.compile(
+    r"^(?:abstract\s+|sealed\s+|final\s+|base\s+|interface\s+)*class\s+(\w+)",
+    re.M,
+)
+# Members every Dart object has, so an access to one is never a bug in this app.
+_OBJECT_MEMBERS = {"toString", "hashCode", "runtimeType", "noSuchMethod"}
+
+
+def _balanced_span(
+    source: str,
+    start: int,
+    open_char: str = "(",
+    close_char: str = ")",
+) -> tuple[str, int]:
+    """Returns the text inside the pair starting at `start` and the index after its close."""
+    depth = 0
+    index = start
+    quote: str | None = None
+    while index < len(source):
+        char = source[index]
+        if quote is not None:
+            if char == "\\":
+                index += 2
+                continue
+            if char == quote:
+                quote = None
+        elif char in "\"'":
+            quote = char
+        elif char == open_char:
+            depth += 1
+        elif char == close_char:
+            depth -= 1
+            if depth == 0:
+                return source[start + 1 : index], index + 1
+        index += 1
+    return "", len(source)
+
+
+def _split_top_level(text: str, separator: str = ",") -> list[str]:
+    """Splits on `separator` at bracket depth 0, ignoring strings."""
+    parts: list[str] = []
+    current: list[str] = []
+    depth = 0
+    quote: str | None = None
+    index = 0
+    while index < len(text):
+        char = text[index]
+        if quote is not None:
+            current.append(char)
+            if char == "\\":
+                if index + 1 < len(text):
+                    current.append(text[index + 1])
+                    index += 2
+                    continue
+            elif char == quote:
+                quote = None
+        elif char in "\"'":
+            quote = char
+            current.append(char)
+        elif char in "([{":
+            depth += 1
+            current.append(char)
+        elif char in ")]}":
+            depth -= 1
+            current.append(char)
+        elif char == separator and depth == 0:
+            parts.append("".join(current))
+            current = []
+        else:
+            current.append(char)
+        index += 1
+    parts.append("".join(current))
+    return parts
+
+
+def _top_level_brace_spans(params: str) -> list[tuple[int, int]]:
+    spans: list[tuple[int, int]] = []
+    depth = 0
+    start = -1
+    for index, char in enumerate(params):
+        if char == "{":
+            if depth == 0:
+                start = index
+            depth += 1
+        elif char == "}":
+            depth -= 1
+            if depth == 0 and start >= 0:
+                spans.append((start, index))
+                start = -1
+    return spans
+
+
+def _constructor_named_params(source: str, class_name: str) -> set[str] | None:
+    """The named parameters of a widget's constructor, or None when it cannot be read."""
+    match = re.search(
+        r"(?:const\s+)?" + re.escape(class_name) + r"\s*\(",
+        source,
+    )
+    if not match:
+        return None
+    paren = source.index("(", match.start())
+    params, _ = _balanced_span(source, paren)
+    named: set[str] = {"key"}
+    for start, end in _top_level_brace_spans(params):
+        for part in _split_top_level(params[start + 1 : end]):
+            found = re.search(r"\bthis\.(\w+)", part)
+            if found:
+                named.add(found.group(1))
+                continue
+            # Plain named parameters (`required ApiClient client`) and those forwarded to
+            # a super constructor (`super.key`) are named the same way as `this.x`.
+            if re.match(r"\s*super\.", part):
+                named.add("key")
+                continue
+            found = re.search(r"([a-z_][A-Za-z0-9_]*)\s*(?:=|,)?\s*$", part.strip())
+            if found:
+                named.add(found.group(1))
+    return named
+
+
+def _model_members(source: str) -> dict[str, set[str]]:
+    """Public members of every class in a model file, keyed by class name."""
+    members: dict[str, set[str]] = {}
+    for match in re.finditer(
+        r"^(?:abstract\s+|sealed\s+|final\s+|base\s+|interface\s+)*class\s+(\w+)",
+        source,
+        re.M,
+    ):
+        name = match.group(1)
+        tail = source[match.end() :]
+        nxt = re.search(r"\n(?:class|enum|mixin|extension|abstract)\b", tail)
+        body = tail[: nxt.start()] if nxt else tail
+        found: set[str] = set()
+        # `final String name;`  ·  `bool get isActive => …`  ·  `Bar copyWith(…)`
+        # A field type may be a function type (`Widget Function(BuildContext, …)`), so the
+        # character class has to allow brackets as well as generics.
+        found.update(
+            re.findall(
+                r"^\s{2}(?:final|const|late|static)?\s*[\w<>?,\[\]() ]+\s+(\w+)\s*;",
+                body,
+                re.M,
+            )
+        )
+        found.update(re.findall(r"^\s{2}(?:static\s+)?[\w<>?, ]+\s+get\s+(\w+)", body, re.M))
+        found.update(re.findall(r"^\s{2}[\w<>?, ]+\s+(\w+)\s*\(", body, re.M))
+        # Static methods and factory/named constructors read as `Name.member`.
+        found.update(
+            re.findall(r"^\s{2}static\s+[\w<>?, ]+\s+(\w+)\s*\(", body, re.M)
+        )
+        found.update(
+            re.findall(
+                r"^\s{2}(?:const\s+|factory\s+)[A-Z]\w*\.(\w+)\s*\(",
+                body,
+                re.M,
+            )
+        )
+        found.update(re.findall(r"^\s{2}(?:static\s+)?(?:const\s+)?[\w<>?, ]+\s+(\w+)\s*=", body, re.M))
+        # An enum-typed or nested-model field still shows up as `final X name;`.
+        members[name] = found
+    return members
+
+
+def _declared_api() -> tuple[
+    dict[str, list[tuple[str, set[str]]]],
+    dict[str, set[str]],
+    dict[str, set[str]],
+    set[str],
+]:
+    """Parses widget constructors, model constructors/members and every enum."""
+    constructors: dict[str, list[tuple[str, set[str]]]] = {}
+    enums: dict[str, set[str]] = {}
+    models: dict[str, set[str]] = {}
+    sources: dict[str, str] = {}
+
+    for path in iter_files(LIB, (".dart",)):
+        relative = rel(path)
+        is_widget_tree = relative.startswith("lib/core/") or "/widgets/" in relative
+        source = stripped(path)
+        sources[relative] = source
+        # Every class in the tree: models anchor the member check, and a state class in a
+        # feature folder is as likely to be misread as one in `data/`.
+        models.update(_model_members(source))
+
+        class_pattern = _CLASS_RE if is_widget_tree else _ANY_CLASS_RE
+        for match in class_pattern.finditer(source):
+            name = match.group(1)
+            # The constructor declaration sits in the class body, which ends at the next
+            # top-level declaration.
+            tail = source[match.end() :]
+            nxt = re.search(r"\n(?:class|enum|mixin|extension|abstract)\b", tail)
+            body = tail[: nxt.start()] if nxt else tail
+            named = _constructor_named_params(body, name)
+            if named is not None:
+                constructors.setdefault(name, []).append((relative, named))
+
+        for match in _ENUM_RE.finditer(source):
+            name = match.group(1)
+            body, _ = _balanced_span(
+                source,
+                source.index("{", match.start()),
+                "{",
+                "}",
+            )
+            members: set[str] = set()
+            for part in _split_top_level(body):
+                found = re.match(r"\s*(\w+)\s*(?:[=,;]|$)", part.strip())
+                if found:
+                    members.add(found.group(1))
+            members.update(re.findall(r"\bget\s+(\w+)", body))
+            members.update(
+                re.findall(r"\bstatic\s+(?:const\s+)?[\w<>?]+\s+(\w+)", body)
+            )
+            members.update(re.findall(r"\b(\w+)\s*\(", body))
+            # Every Dart enum also carries these, whether declared or not.
+            members.update({"values", "name", "index"})
+            enums[name] = members
+
+    return constructors, enums, models, set(sources)
+
+
+def _all_enum_members() -> dict[str, set[str]]:
+    """Every enum in the project, with its values and declared members."""
+    enums: dict[str, set[str]] = {}
+    for path in iter_files(LIB, (".dart",)):
+        source = stripped(path)
+        for match in _ENUM_RE.finditer(source):
+            name = match.group(1)
+            body, _ = _balanced_span(
+                source,
+                source.index("{", match.start()),
+                "{",
+                "}",
+            )
+            members: set[str] = set()
+            for part in _split_top_level(body):
+                found = re.match(r"\s*(\w+)\s*(?:[=,;]|$)", part.strip())
+                if found:
+                    members.add(found.group(1))
+            members.update(re.findall(r"\bget\s+(\w+)", body))
+            members.update(
+                re.findall(r"\bstatic\s+(?:const\s+)?[\w<>?]+\s+(\w+)", body)
+            )
+            members.update(re.findall(r"\b(\w+)\s*\(", body))
+            members.update({"values", "name", "index"})
+            if name in enums:
+                enums[name] |= members
+            else:
+                enums[name] = members
+    return enums
+
+
+def _model_typed_variables(source: str, model_names: set[str]) -> dict[str, set[str]]:
+    """Local/parameter names bound to a model type, e.g. `ArmxDevice device` → device.
+
+    A name may appear in several scopes with different types (`value` is a `SmartHomeState`
+    in one switch arm and a `double` in another), so every candidate is kept and a member is
+    only reported when **all** candidates lack it. Precision matters more than recall here:
+    a checker that cries wolf is a checker people learn to ignore.
+    """
+    bindings: dict[str, set[str]] = {}
+    for model in model_names:
+        pattern = re.compile(
+            r"\b" + re.escape(model) + r"\??\s+([a-z_][A-Za-z0-9_]*)\b"
+        )
+        for match in pattern.finditer(source):
+            identifier = match.group(1)
+            if not _names_the_type(identifier, model):
+                continue
+            bindings.setdefault(identifier, set()).add(model)
+    return bindings
+
+
+def _collection_typed_variables(source: str, model_names: set[str]) -> dict[str, set[str]]:
+    """Names bound to a `List<Model>` / `Set<Model>`, e.g. `final List<ArmxDevice> devices`.
+
+    Used to type the parameter of `devices.where((device) => …)` so the body can be checked.
+    Without this, a lambda parameter shares a name with unrelated code in the same file often
+    enough that the check would either miss real errors or report false ones.
+    """
+    bindings: dict[str, set[str]] = {}
+    for model in model_names:
+        pattern = re.compile(
+            r"\b(?:List|Set|Iterable)<" + re.escape(model) + r">\s+([a-z_][A-Za-z0-9_]*)\b"
+        )
+        for match in pattern.finditer(source):
+            bindings.setdefault(match.group(1), set()).add(model)
+    return bindings
+
+
+def _lambda_parameter_bindings(
+    source: str, collections: dict[str, set[str]]
+) -> dict[str, set[str]]:
+    """Types the parameter of a collection callback, so its body can be checked.
+
+    `alarms.firstWhere((alarm) => alarm.isRingng)` is checked because `alarms` is a
+    `List<ArmxAlarm>`; the parameter inherits the element type.
+    """
+    bindings: dict[str, set[str]] = {}
+    calls = (
+        "firstWhere", "lastWhere", "singleWhere", "where", "whereType", "any", "every",
+        "map", "forEach", "reduce", "fold", "expand", "indexWhere", "takeWhile",
+        "skipWhile", "sort", "removeWhere",
+    )
+    for collection, models in collections.items():
+        pattern = re.compile(
+            r"\b"
+            + re.escape(collection)
+            + r"\.(?:"
+            + "|".join(calls)
+            + r")\(\s*\(\s*([a-z_][A-Za-z0-9_]*)\s*[,)]"
+        )
+        for match in pattern.finditer(source):
+            parameter = match.group(1)
+            bindings.setdefault(parameter, set()).update(models)
+    return bindings
+
+
+def _names_the_type(identifier: str, type_name: str) -> bool:
+    """Whether `identifier` reads as a variable holding `type_name`.
+
+    `device` holds an `ArmxDevice`, `pairing` a `PairingState`, `guest` a `GuestProfile`.
+    The restriction is what keeps this check honest: a parameter called `error` or `spec` or
+    `value` is usually a different type in a neighbouring scope, and reporting those would
+    drown the real findings.
+    """
+    identifier = identifier.lower()
+    lowered = type_name.lower()
+    if identifier == lowered:
+        return True
+    if len(identifier) < 4:
+        return False
+    return lowered.endswith(identifier) or lowered.startswith(identifier)
+
+
+# Members every Dart object, string, number, collection and future has. A member in this set
+# is never reported: the binding heuristic cannot tell `AsyncValue.value` from a model field
+# called `value`, and guessing wrong would produce noise instead of signal.
+_CORE_MEMBERS = {
+    "length", "isEmpty", "isNotEmpty", "first", "last", "single", "value", "values",
+    "keys", "entries", "contains", "containsKey", "containsValue", "indexOf",
+    "toList", "toSet", "toMap", "map", "where", "whereType", "forEach", "fold",
+    "reduce", "any", "every", "join", "skip", "take", "takeWhile", "skipWhile",
+    "expand", "add", "addAll", "remove", "removeWhere", "clear", "insert", "putIfAbsent",
+    "sort", "reversed", "round", "floor", "ceil", "abs", "toInt", "toDouble", "toString",
+    "toLowerCase", "toUpperCase", "trim", "split", "substring", "replaceAll", "startsWith",
+    "endsWith", "padLeft", "padRight", "codeUnits", "runes", "compareTo", "clamp",
+    "toJson", "fromJson", "hasValue", "hasError", "isLoading", "when", "maybeWhen",
+    "asData", "requireValue", "asData", "unwrapPrevious", "list", "name", "identifier",
+    "then", "catchError", "whenComplete", "timeout", "microseconds", "milliseconds",
+    "seconds", "minutes", "hours", "days", "inDays", "inHours", "inMinutes", "inSeconds",
+    "isBefore", "isAfter", "add", "subtract", "difference", "copyWith", "duration",
+    "elementAt", "firstWhere", "lastWhere", "singleWhere", "toRadixString", "toARGB32",
+}
+
+
+def check_api_surface() -> None:
+    """Compares every use site against the declarations it calls.
+
+    Dart's analyzer cannot run in this environment, so this reimplements the three checks
+    that would have caught the most common mistakes in this tree: passing an argument a
+    widget or model does not declare, reading a member a model does not have, and naming an
+    enum value that does not exist.
+    """
+    constructors, _enums, models, declarations = _declared_api()
+    all_enums = _all_enum_members()
+    model_names = set(models)
+
+    for path in usage_files():
+        relative = rel(path)
+        scanned = stripped(path)
+
+        # ---- unknown named arguments -------------------------------------
+        for name, declarations_for_name in constructors.items():
+            # A private helper declared in several files is resolved per file; a public widget
+            # declared once is checked everywhere it is used.
+            same_file = [
+                allowed for where, allowed in declarations_for_name if where == relative
+            ]
+            if same_file:
+                allowed = same_file[0]
+            elif len(declarations_for_name) == 1:
+                allowed = declarations_for_name[0][1]
+            else:
+                continue
+            for match in re.finditer(
+                r"(?<![\w.])" + re.escape(name) + r"\s*\(", scanned
+            ):
+                paren = scanned.index("(", match.start())
+                args, _ = _balanced_span(scanned, paren)
+                for part in _split_top_level(args):
+                    found = re.match(r"\s*(\w+)\s*:", part)
+                    if found and found.group(1) not in allowed:
+                        line = scanned.count("\n", 0, match.start()) + 1
+                        errors.append(
+                            f"unknown argument '{found.group(1)}' passed to {name} "
+                            f"in {relative}:{line}"
+                        )
+
+        # ---- unknown enum values -----------------------------------------
+        for name, members in all_enums.items():
+            for match in re.finditer(
+                r"(?<![\w.])" + re.escape(name) + r"\.(\w+)\b(?!\s*\()",
+                scanned,
+            ):
+                if match.group(1) not in members:
+                    line = scanned.count("\n", 0, match.start()) + 1
+                    errors.append(
+                        f"unknown {name} value '{match.group(1)}' "
+                        f"in {relative}:{line}"
+                    )
+
+        # ---- unknown model members ---------------------------------------
+        if model_names:
+            candidates = _model_typed_variables(scanned, model_names)
+            collections = _collection_typed_variables(scanned, model_names)
+            for parameter, inferred in _lambda_parameter_bindings(
+                scanned, collections
+            ).items():
+                candidates.setdefault(parameter, set()).update(inferred)
+            for variable, possible in candidates.items():
+                allowed: set[str] = set()
+                for model in possible:
+                    allowed |= models.get(model, set())
+                for match in re.finditer(
+                    r"\b" + re.escape(variable) + r"\??\.([A-Za-z_]\w*)", scanned
+                ):
+                    member = match.group(1)
+                    if member in allowed or member in _CORE_MEMBERS:
+                        continue
+                    line = scanned.count("\n", 0, match.start()) + 1
+                    errors.append(
+                        f"no member '{member}' on {'/'.join(sorted(possible))} "
+                        f"(read from '{variable}') in {relative}:{line}"
+                    )
+
+
+def check_self_test() -> None:
+    """Proves the parsers still detect what they are supposed to detect.
+
+    Every check in this file is a heuristic standing in for `dart analyze`. A heuristic can
+    silently rot into something that always passes, which is worse than no check at all, so
+    the parsers are exercised against small snippets whose answers are known — and the real
+    tree has to yield plausible counts at the same time.
+    """
+    named = _constructor_named_params(
+        "const Widget1({required this.alpha, this.beta, super.key});",
+        "Widget1",
+    )
+    if named != {"key", "alpha", "beta"}:
+        errors.append(f"self-test: constructor parameters parsed as {sorted(named or [])}")
+
+    body, _ = _balanced_span(
+        "enum E {\n  a,\n  b,\n}\n",
+        "enum E {".index("{"),
+        "{",
+        "}",
+    )
+    if body.strip() != "a,\n  b,":
+        errors.append(f"self-test: brace span parsed as {body!r}")
+
+    lambda_types = _lambda_parameter_bindings(
+        "final List<ArmxDevice> devices = <ArmxDevice>[];\n"
+        "final Iterable<ArmxDevice> lit = devices.where((device) => device.online);\n",
+        _collection_typed_variables(
+            "final List<ArmxDevice> devices = <ArmxDevice>[];", {"ArmxDevice"}
+        ),
+    )
+    if lambda_types.get("device") != {"ArmxDevice"}:
+        errors.append(
+            f"self-test: lambda parameter typed as {sorted(lambda_types.get('device', []))}"
+        )
+
+    members = _model_members(
+        "class M {\n  const M({this.name});\n  final String name;\n"
+        "  bool get isActive => name.isNotEmpty;\n}\n"
+    ).get("M", set())
+    for expected in ("name", "isActive"):
+        if expected not in members:
+            errors.append(f"self-test: model member '{expected}' not parsed")
+
+    if not _names_the_type("device", "ArmxDevice"):
+        errors.append("self-test: 'device' should read as an ArmxDevice")
+    if _names_the_type("error", "AppException"):
+        errors.append("self-test: 'error' must not be bound to AppException")
+
+    # A member that does not exist on a class this project declares must be caught, and a
+    # constructor tear-off (`Controller.new`) must not be.
+    members, counts = _classes_and_counts()
+    if not members:
+        errors.append("self-test: no class members parsed at all")
+    if "new" not in (_CORE_MEMBERS | {"new"}):
+        errors.append("self-test: constructor tear-offs would be flagged")
+
+    constructors, _enums, models, _sources = _declared_api()
+    if len(constructors) < 30 or len(models) < 30 or len(_all_enum_members()) < 15:
+        errors.append(
+            "self-test: the tree no longer parses as expected "
+            f"({len(constructors)} constructors, {len(models)} classes, "
+            f"{len(_all_enum_members())} enums)"
+        )
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Offline sanity checks for A.R.M.X AI")
-    parser.add_argument("--quiet", action="store_true", help="suppress the notes section")
-    args = parser.parse_args()
-
+    quiet = "--quiet" in sys.argv
+    check_arb_json()
+    check_self_test()
     check_headers()
-    check_brackets()
+    check_brackets_and_codegen()
     check_imports()
-    check_localization()
-    check_secrets_and_transport()
-    check_generated_parts()
-    check_symbol_resolution()
-    check_file_budget()
-    check_readme_status()
+    check_unused_imports()
+    check_api_surface()
+    check_static_references()
+    check_provider_names()
+    check_l10n()
+    check_secrets_and_reachability()
 
-    if notes and not args.quiet:
-        print("Notes:")
-        for note in notes:
-            print(f"  - {note}")
-    if failures:
-        print(f"\n{len(failures)} problem(s) found:")
-        for problem in failures:
-            print(f"  x {problem}")
+    dart_files = len(list(iter_files(LIB, (".dart",))))
+    if not quiet:
+        print(f"A.R.M.X static checks — {dart_files} Dart files under lib/")
+    for note in notes:
+        print(f"NOTE  {note}")
+    for error in errors:
+        print(f"FAIL  {error}")
+    if errors:
+        print(f"\n{len(errors)} problem(s) found.")
         return 1
-    print("static_checks: OK")
+    print("OK    all structural checks passed")
     return 0
 
 

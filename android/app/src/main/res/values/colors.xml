@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Copyright (c) 2026 Md. Moshiur Rahman Mohi / THAMJJ13.TOP. Proprietary. All Rights Reserved. -->
+<!--
+  The launch window colour, mirroring ArmxPalette in lib/core/theme/colors.dart. These two
+  values are the only colours Android knows about; everything else is painted by Flutter, so
+  the palette cannot drift apart between the two systems by more than this one pair.
+-->
+<resources>
+    <color name="armx_ink">#0B1220</color>
+    <color name="armx_fog">#F4F6FB</color>
+</resources>

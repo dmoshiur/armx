@@ -2,7 +2,9 @@
 #
 # Strict analysis for A.R.M.X AI.
 # `flutter analyze` must report ZERO warnings and ZERO errors with this file.
-# Generated sources are excluded because build_runner owns them.
+#
+# The project is codegen-free (docs/decisions/0002-no-codegen.md), so the only generated
+# sources are the localization bindings under lib/l10n/generated/ — excluded below.
 
 include: package:flutter_lints/flutter_lints.yaml
 
@@ -13,26 +15,13 @@ analyzer:
     strict-raw-types: true
   exclude:
     - "**/*.g.dart"
-    - "**/*.freezed.dart"
     - "lib/l10n/generated/**"
-    - "lib/main.g.dart"
     - "**/.dart_tool/**"
   errors:
     # Treat these as hard failures instead of hints.
-    invalid_annotation_target: ignore # freezed + json_serializable on the same class
     missing_required_param: error
     missing_return: error
-    todo: ignore # tracked in the README roadmap instead of in analyzer output
-  plugins:
-    - custom_lint
-# NOTE: custom_lint (riverpod_lint) diagnostics are intentionally left at their
-# package defaults. If a project-specific style hint ever needs silencing, add:
-#
-#   custom_lint:
-#     rules:
-#       - <rule_name>: false
-#
-# (rule names come from riverpod_lint's docs; they are versioned with the plugin).
+    todo: ignore # tracked in the roadmap instead of in analyzer output
 
 linter:
   rules:

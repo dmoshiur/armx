@@ -1,97 +1,162 @@
 # Copyright (c) 2026 Md. Moshiur Rahman Mohi / THAMJJ13.TOP. Proprietary. All Rights Reserved.
 #
-# Verification pipeline for A.R.M.X AI.
+# Continuous integration for the A.R.M.X AI frontend.
 #
-# It runs exactly the sequence documented in docs/run.md and docs/verification.md:
-#   1. resolve the pinned dependency graph;
-#   2. generate sources (freezed / json_serializable / drift / riverpod / gen-l10n);
-#   3. offline structural checks (tool/static_checks.py) — fast, SDK-independent guards;
-#   4. `flutter analyze` (must be warning-free);
-#   5. `flutter test --coverage` + the 70 % line-coverage gate over core/ and data/.
-#
-# The integration test (`integration_test/auth_flow_test.dart`) needs a device/emulator or
-# a desktop display, so it only runs on a manual dispatch.
+# Four jobs, in the order a developer meets them locally:
+#   verify  — the licence headers, the structure, the generated localizations, the lints;
+#   test    — the unit and widget suites, with the coverage floor;
+#   build   — a release web bundle and a debug APK, so a broken platform build is not a
+#             surprise at release time;
+#   integration — the end-to-end flows, which need a device or a Linux desktop, so they run
+#             on main and on demand rather than on every draft push.
 
 name: CI
 
 on:
   push:
-    branches:
-      - main
-      - 'arena/**'
+    branches: [main]
   pull_request:
+    branches: [main]
   workflow_dispatch:
+
+env:
+  FLUTTER_VERSION: 3.44.0
+  # A build-time value only: the base URL of the backend. No secret is ever passed here, and
+  # pubspec.yaml holds no keys — the client cannot represent one.
+  ARMX_API_BASE_URL: https://armx.example:8443
 
 jobs:
   verify:
-    name: analyze · test · coverage
+    name: Structure and lints
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      # The toolchain is pinned to the version named in pubspec.yaml. If this exact build is
-      # not published on the stable channel yet, move the pin forward *together* with
-      # pubspec.yaml's `environment:` block (see docs/decisions/0002-dependency-pins.md).
-      - uses: subosito/flutter-action@v2
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
         with:
-          flutter-version: 3.47.5
+          flutter-version: ${{ env.FLUTTER_VERSION }}
           channel: stable
           cache: true
 
-      - name: Toolchain versions
-        run: flutter --version
-
-      - name: Resolve dependencies (exact pins, no ranges)
-        run: flutter pub get
-
-      - name: Generate sources (freezed / json / drift / riverpod)
-        run: dart run build_runner build --delete-conflicting-outputs
-
-      - name: Generate localizations (EN + BN)
-        run: flutter gen-l10n
-
-      - name: Offline structural checks (headers, imports, ARB parity, secrets)
+      - name: Static checks (headers, structure, l10n keys, hardcoded values)
         run: python3 tool/static_checks.py
 
-      - name: flutter analyze
-        run: flutter analyze
+      - name: Dependencies
+        run: flutter pub get
 
-      - name: Flutter unit + widget + golden tests
-        run: flutter test --coverage
+      - name: Generate localizations
+        run: flutter gen-l10n
 
-      - name: Coverage gate (core/ + data/ ≥ 70 %)
+      - name: Confirm the generated localizations match the ARB files
         run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y -qq lcov
-          lcov --remove coverage/lcov_coverage.info \
-            'lib/features/*' 'lib/l10n/*' '**/*.g.dart' '**/*.freezed.dart' \
-            -o coverage/core_data.info
-          lcov --summary coverage/core_data.info
-          python3 tool/coverage_gate.py coverage/core_data.info 70
+          git diff --exit-code -- lib/l10n/generated || {
+            echo "::error::lib/l10n/generated is stale — run flutter gen-l10n and commit the result";
+            exit 1;
+          }
 
-      - name: Upload coverage report
+      - name: Analyze
+        run: flutter analyze --no-pub
+
+  test:
+    name: Unit and widget tests
+    runs-on: ubuntu-latest
+    needs: verify
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - run: flutter pub get
+      - run: flutter gen-l10n
+
+      - name: Tests with coverage
+        run: flutter test --coverage --no-pub
+
+      - name: Coverage floor
+        run: |
+          python3 tool/coverage_gate.py \
+            --threshold 70 \
+            --require-prefix lib/core
+
+      - name: Upload coverage
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: coverage-core-data
-          path: coverage/core_data.info
-          if-no-files-found: ignore
+          name: coverage-lcov
+          path: coverage/lcov.info
+          if-no-files-found: warn
 
-  integration:
-    name: integration test (manual dispatch)
-    if: github.event_name == 'workflow_dispatch'
+  build:
+    name: Builds
     runs-on: ubuntu-latest
+    needs: verify
     steps:
       - uses: actions/checkout@v4
-      - uses: subosito/flutter-action@v2
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
         with:
-          flutter-version: 3.47.5
+          flutter-version: ${{ env.FLUTTER_VERSION }}
           channel: stable
           cache: true
-      - run: flutter pub get
-      - run: dart run build_runner build --delete-conflicting-outputs
-      - run: flutter gen-l10n
-      - name: Integration flow (pair → approve → chat → kill-switch)
-        uses: GabrielBB/xvfb-action@v1
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
         with:
-          run: flutter test integration_test/auth_flow_test.dart
+          distribution: temurin
+          java-version: '21'
+
+      - run: flutter pub get
+      - run: flutter gen-l10n
+
+      - name: Web release build
+        run: |
+          flutter build web --release \
+            --dart-define=ARMX_API_BASE_URL=${{ env.ARMX_API_BASE_URL }} \
+            --dart-define=ARMX_USE_MOCK_BACKEND=false
+
+      - name: Android debug build
+        run: |
+          flutter build apk --debug \
+            --dart-define=ARMX_API_BASE_URL=${{ env.ARMX_API_BASE_URL }} \
+            --dart-define=ARMX_USE_MOCK_BACKEND=false
+
+      - name: Upload the web bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-release
+          path: build/web
+          if-no-files-found: error
+
+  integration:
+    name: Integration flows
+    runs-on: ubuntu-latest
+    needs: verify
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - name: Linux desktop dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build libgtk-3-dev xvfb
+
+      - run: flutter pub get
+      - run: flutter gen-l10n
+      - run: flutter config --enable-linux-desktop
+
+      - name: Integration tests (headless, virtual display)
+        run: xvfb-run -a flutter test integration_test -d linux --no-pub

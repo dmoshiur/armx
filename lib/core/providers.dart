@@ -1,151 +1,190 @@
 // Copyright (c) 2026 Md. Moshiur Rahman Mohi / THAMJJ13.TOP. Proprietary. All Rights Reserved.
 
-import 'package:flutter/foundation.dart';
-import 'package:logger/logger.dart';
-import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
-import '../core/platform/desktop_shell.dart';
-import '../core/platform/desktop_shell_native.dart';
 import '../data/api/armx_api.dart';
-import '../data/api/mock/mock_api.dart';
-import '../data/db/armx_database.dart';
-import '../data/models/preferences.dart';
-import '../data/repositories/announcement_repository.dart';
-import '../data/repositories/chat_repository.dart';
-import '../data/repositories/preferences_repository.dart';
+import '../data/api/mock/mock_armx_api.dart';
+import '../data/api/rest_armx_api.dart';
 import 'config/app_config.dart';
 import 'errors/app_exception.dart';
-import 'logging/armx_logger.dart';
-import 'security/secure_store.dart';
-import 'security/secure_screen.dart';
-import 'security/verification_gateway.dart';
-import '../core/services/intercom_audio.dart';
-import '../core/services/intercom_audio_native.dart';
-import '../core/platform/autostart_service.dart';
-import '../core/platform/device_availability.dart';
-import '../core/platform/silence_probe.dart';
-import 'utils/clock.dart';
-
-part 'providers.g.dart';
+import 'network/api_client.dart';
+import 'network/token_store.dart';
+import 'network/websocket_client.dart';
+import 'preferences/preferences_store.dart';
 
 /// Compile-time configuration.
 ///
 /// **Must be overridden** in `main()` with `AppConfig.fromEnvironment()` (or with a test
-/// configuration). Reading it without an override is a programming error.
-@Riverpod(keepAlive: true)
-AppConfig appConfig(Ref ref) =>
-    throw const ConfigException('appConfigProvider must be overridden in main().');
+/// configuration). Reading it without an override is a programming error, so the failure
+/// is loud rather than a silently-defaulted staging URL.
+final Provider<AppConfig> appConfigProvider = Provider<AppConfig>(
+  (Ref ref) => throw StateError(
+    'appConfigProvider must be overridden in main() with '
+    'AppConfig.fromEnvironment().',
+  ),
+);
 
-/// In-memory log buffer shown by Settings → Diagnostics.
-@Riverpod(keepAlive: true)
-LogRingBuffer logBuffer(Ref ref) => LogRingBuffer();
+/// Secure credential storage. Tokens only, never preferences.
+final Provider<TokenStore> tokenStoreProvider = Provider<TokenStore>(
+  (Ref ref) => const SecureTokenStore(),
+);
 
-/// App-wide redacting logger.
-@Riverpod(keepAlive: true)
-Logger appLogger(Ref ref) => ArmxLogging.create(
-      ref.watch(appConfigProvider).logLevel,
-      buffer: ref.watch(logBufferProvider),
-    );
-
-/// Wall clock (replaced with a fixed clock in tests).
-@Riverpod(keepAlive: true)
-Clock clock(Ref ref) => const SystemClock();
-
-/// Platform secure storage (tokens and key material only).
-@Riverpod(keepAlive: true)
-SecureStore secureStore(Ref ref) => PlatformSecureStore();
-
-/// Screenshot/screen-recording protection.
-@Riverpod(keepAlive: true)
-ScreenSecurity screenSecurity(Ref ref) => PlatformScreenSecurity();
-
-/// Local SQLite database. Tests override this with an in-memory executor.
-@Riverpod(keepAlive: true)
-ArmxDatabase armxDatabase(Ref ref) => ArmxDatabase.open();
-
-/// Preference storage.
-@Riverpod(keepAlive: true)
-PreferencesRepository preferencesRepository(Ref ref) =>
-    PreferencesRepository(ref.watch(armxDatabaseProvider));
-
-/// Chat transcript persistence (offline cache of the conversation).
-@Riverpod(keepAlive: true)
-ChatRepository chatRepository(Ref ref) => ChatRepository(ref.watch(armxDatabaseProvider));
-
-/// On-device verification gateway (face / voice / system biometric prompts).
-///
-/// Defaults to the deterministic [SimulatedVerificationGateway] until the real
-/// biometric pipelines land (voice = step 4, vision = step 7); tests override it
-/// with a fake to exercise cancellation and failure paths.
-@Riverpod(keepAlive: true)
-VerificationGateway verificationGateway(Ref ref) =>
-    SimulatedVerificationGateway(clock: ref.watch(clockProvider));
-
-/// Local copy of the voice-announcement log (shared by the user and Admin views).
-@Riverpod(keepAlive: true)
-AnnouncementRepository announcementRepository(Ref ref) =>
-    AnnouncementRepository(ref.watch(armxDatabaseProvider));
-
-/// Recorder/player used by the walkie-talkie intercom.
-///
-/// Real implementation on desktop/mobile (`RecordIntercomAudio`), silent stub on the web.
-@Riverpod(keepAlive: true)
-IntercomAudio intercomAudio(Ref ref) =>
-    kIsWeb ? const SilentIntercomAudio() : RecordIntercomAudio();
-
-/// OS "do not disturb" detection.
-///
-/// [AlwaysAudibleProbe] is the current implementation: detecting the platform focus mode is
-/// a per-OS follow-up tracked in `docs/desktop-mode.md`. Until then the feature *assumes
-/// audio is allowed* once the device has consented, which is the conservative choice for
-/// the demo but must not be mistaken for a completed integration.
-@Riverpod(keepAlive: true)
-SilenceProbe silenceProbe(Ref ref) => const AlwaysAudibleProbe();
-
-/// Tray / hotkey / popup window shell.
-///
-/// [NoopDesktopShell] on mobile and the web (where the Android foreground service owns
-/// background mode), the native adapter on Windows, macOS and Linux.
-@Riverpod(keepAlive: true)
-DesktopShell desktopShell(Ref ref) => kIsWeb
-    ? const NoopDesktopShell()
-    : NativeDesktopShell(iconDirectory: 'assets/tray');
-
-/// Launch-at-login integration.
-@Riverpod(keepAlive: true)
-AutostartService autostartService(Ref ref) =>
-    kIsWeb ? const NoopAutostartService() : LaunchAtStartupService();
-
-/// Audio-input / video-device enumeration used by the tooltip and the readiness screen.
-@Riverpod(keepAlive: true)
-DeviceAvailabilityService deviceAvailability(Ref ref) => kIsWeb
-    ? const NoopDeviceAvailabilityService()
-    : RecordDeviceAvailabilityService();
-
-/// Reactive preference snapshot (theme, locale, wake word, thresholds).
-@Riverpod(keepAlive: true)
-Stream<AppPreferences> appPreferences(Ref ref) =>
-    ref.watch(preferencesRepositoryProvider).watch();
-
-/// The A.R.M.X backend contract.
-///
-/// With `--dart-define=USE_MOCK=true` (the default while the backend does not
-/// exist) this returns the deterministic in-app mock. The REST/WebSocket
-/// transport is not wired yet, so a non-mock build fails fast with a clear
-/// message instead of silently pretending to be connected.
-@Riverpod(keepAlive: true)
-ArmxApi armxApi(Ref ref) {
-  final config = ref.watch(appConfigProvider);
-  if (!config.useMockBackend) {
-    throw const ConfigException(
-      'The REST/WebSocket transport is implemented in delivery step 2. '
-      'Run with --dart-define=USE_MOCK=true (default) until then.',
-    );
-  }
-  return MockArmxApi(
+/// The single HTTP client. Every repository receives it; no screen ever builds one.
+final Provider<ApiClient> apiClientProvider = Provider<ApiClient>((Ref ref) {
+  final AppConfig config = ref.watch(appConfigProvider);
+  return ApiClient.create(
     config: config,
-    logger: ref.watch(appLoggerProvider),
-    clock: ref.watch(clockProvider),
-    random: MockArmxApi.deterministicRandom(),
+    tokenStore: ref.watch(tokenStoreProvider),
+    onAuthFailure: (AppException error) {
+      // The auth controller listens for this and moves the session to
+      // `sessionExpired`, which the router turns into a redirect to sign-in.
+      ref.read(authFailureSinkProvider.notifier).state = error;
+    },
   );
+});
+
+/// A one-slot sink the API client writes auth failures into.
+///
+/// Kept as its own provider so `ApiClient` does not need to import the auth feature
+/// (which would be a cycle: auth depends on the client).
+final NotifierProvider<AuthFailureSink, AppException?> authFailureSinkProvider =
+    NotifierProvider<AuthFailureSink, AppException?>(AuthFailureSink.new);
+
+/// Holds the most recent auth failure observed by the transport.
+class AuthFailureSink extends Notifier<AppException?> {
+  @override
+  AppException? build() => null;
+
+  /// Clears the slot after the auth layer has consumed the failure.
+  void clear() => state = null;
 }
+
+/// The assistant/telemetry socket, created lazily because it needs a token source.
+///
+/// The access token is read from secure storage on every (re)connect rather than captured
+/// once, so a token refreshed after a drop is the one that authenticates the new socket.
+final Provider<WebSocketClient> webSocketProvider = Provider<WebSocketClient>((Ref ref) {
+  final AppConfig config = ref.watch(appConfigProvider);
+  final WebSocketClient client = WebSocketClient(
+    baseUrl: config.webSocketUrl,
+    tokenProvider: () async {
+      final AuthTokens? tokens = await ref.read(tokenStoreProvider).read();
+      return tokens?.accessToken;
+    },
+  );
+  ref.onDispose(client.dispose);
+  return client;
+});
+
+/// The backend contract: the mock by default, the REST/WebSocket transport otherwise.
+///
+/// `--dart-define=ARMX_USE_MOCK_BACKEND=false` switches to the real transport. There is no
+/// third option: a build that cannot reach a backend fails loudly instead of pretending to
+/// be connected.
+///
+/// The same socket instance the connection indicator reads is the one the assistant streams
+/// through, so the state on screen and the state behind the transcript cannot disagree. In a
+/// mock build there is no socket at all — the mock answers locally and says so everywhere it
+/// is shown.
+final Provider<ArmxApi> armxApiProvider = Provider<ArmxApi>((Ref ref) {
+  final AppConfig config = ref.watch(appConfigProvider);
+  if (config.useMockBackend) {
+    return MockArmxApi(clock: () => DateTime.now());
+  }
+  return RestArmxApi(
+    client: ref.watch(apiClientProvider),
+    socket: ref.watch(webSocketProvider),
+    config: config,
+  );
+});
+
+/// User preferences, loaded once at launch.
+///
+/// Exposed as a `Notifier` rather than an async value because `MaterialApp` needs the
+/// theme mode and locale synchronously on the very first frame; the splash screen holds
+/// the UI until [build] has loaded them.
+final NotifierProvider<PreferencesController, AppPreferences>
+    preferencesProvider =
+    NotifierProvider<PreferencesController, AppPreferences>(PreferencesController.new);
+
+/// Loads and updates [AppPreferences].
+class PreferencesController extends Notifier<AppPreferences> {
+  bool _loaded = false;
+
+  /// True once the stored values have been read.
+  bool get loaded => _loaded;
+
+  @override
+  AppPreferences build() => const AppPreferences();
+
+  /// Reads the stored preferences. Called by the splash bootstrap.
+  Future<void> load({PreferencesStore? store}) async {
+    final PreferencesStore effective = store ?? const SharedPreferencesStore();
+    final AppPreferences loaded = await effective.load();
+    state = loaded;
+    _loaded = true;
+  }
+
+  /// Applies and persists a change.
+  Future<void> update(
+    AppPreferences Function(AppPreferences current) transform, {
+    PreferencesStore? store,
+  }) async {
+    final AppPreferences next = transform(state);
+    if (next == state) {
+      return;
+    }
+    // Update in memory first so the UI responds immediately, then persist. A failed write
+    // is surfaced by the caller's error handling rather than silently losing the change.
+    state = next;
+    final PreferencesStore effective = store ?? const SharedPreferencesStore();
+    await effective.save(next);
+  }
+
+  /// Switches theme mode.
+  Future<void> setThemeMode(ThemeMode mode) =>
+      update((AppPreferences p) => p.copyWith(themeMode: mode));
+
+  /// Switches language. Only `en` and `bn` ship.
+  Future<void> setLocale(String code) =>
+      update((AppPreferences p) => p.copyWith(localeCode: code == 'bn' ? 'bn' : 'en'));
+
+  /// Collapses or expands the medium-layout rail.
+  Future<void> setRailCollapsed({required bool collapsed}) =>
+      update((AppPreferences p) => p.copyWith(railCollapsed: collapsed));
+
+  /// Engages or releases the guest-greeter camera kill-switch.
+  Future<void> setGuestKillEngaged({required bool engaged}) =>
+      update((AppPreferences p) => p.copyWith(guestGreeterKillEngaged: engaged));
+
+  /// Switches an interrupt-on-this-device preference.
+  Future<void> setNotification({
+    bool? alarms,
+    bool? toolCalls,
+    bool? deployments,
+  }) =>
+      update(
+        (AppPreferences p) => p.copyWith(
+          notifyAlarms: alarms,
+          notifyToolCalls: toolCalls,
+          notifyDeployments: deployments,
+        ),
+      );
+}
+
+/// A convenience handle used by the diagnostics screen.
+///
+/// Returns the same [SharedPreferences] instance the platform cache holds, without
+/// exposing any of its values.
+final FutureProvider<Map<String, Object?>> preferenceDiagnosticsProvider =
+    FutureProvider<Map<String, Object?>>((Ref ref) async {
+  final SharedPreferences prefs = await SharedPreferences.getInstance();
+  return <String, Object?>{
+    'keys': prefs.getKeys().length,
+    'containsTokens': prefs.getKeys().any(
+          (String key) => key.contains('token') || key.contains('secret'),
+        ),
+  };
+});

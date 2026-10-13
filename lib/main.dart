@@ -1,140 +1,68 @@
 // Copyright (c) 2026 Md. Moshiur Rahman Mohi / THAMJJ13.TOP. Proprietary. All Rights Reserved.
 
-import 'dart:ui';
-
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:logger/logger.dart';
 
 import 'app.dart';
+import 'features/overlay/presentation/overlay_bubble_entry.dart';
 import 'core/config/app_config.dart';
-import 'core/config/app_info.dart';
-import 'core/errors/app_exception.dart';
-import 'core/logging/armx_logger.dart';
 import 'core/providers.dart';
-import 'core/theme/armx_colors.dart';
-import 'core/theme/armx_theme.dart';
-import 'core/widgets/armx_wordmark.dart';
 
 /// Entry point.
 ///
-/// Order matters: configuration is validated *before* the first frame (a release build with
-/// a cleartext URL must refuse to start), the logger is created before any plugin runs, and
-/// every error handler funnels into that logger so nothing is ever silently swallowed.
-void main() {
+/// Only two things happen here: the configuration is validated and installed, and the app is
+/// started. **No orientation is locked and no device class is special-cased** — the layout is
+/// decided by available width alone, so a tablet in landscape, a phone in portrait and a
+/// resized browser window all take the same code path.
+///
+/// Reading the stored preferences belongs to the splash screen, which waits for them before
+/// the first themed frame: doing it here without awaiting would flash the wrong theme, and
+/// awaiting it here would hold the very first frame behind a disk read with no UI to show.
+///
+/// ## Configuration
+///
+/// The backend URL is build-time configuration, injected with `--dart-define`:
+///
+/// ```bash
+/// flutter run \
+///   --dart-define=ARMX_API_BASE_URL=https://armx.example:8443 \
+///   --dart-define=ARMX_USE_MOCK_BACKEND=false
+/// ```
+///
+/// No key, token or secret is ever passed this way. `AppConfig` cannot represent one, and
+/// [AppConfig.httpsBaseUrl] refuses a cleartext base URL outside a debug mock build.
+///
+/// ## Failure policy
+///
+/// If the preferences store cannot be read, the app still starts: the splash's `FutureBuilder`
+/// reports the failure with a retry, because an unreadable preferences file must not mean an
+/// unusable assistant. If the *configuration* is invalid (a cleartext URL in a release
+/// build), `runApp` is never reached — the process fails loudly instead of talking to a
+/// server in the clear.
+/// The floating bubble's entry point.
+///
+/// `flutter_overlay_window` starts a second engine and calls this symbol by name, so it must
+/// be a top-level function in the entry-point library and it must survive tree shaking. It is
+/// declared here, in one line, so there is exactly one obvious answer to "where does the
+/// overlay start?" — the UI it runs lives in the overlay feature.
+@pragma('vm:entry-point')
+void overlayMain() => overlayBubbleMain();
+
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  final AppConfig config;
-  try {
-    config = AppConfig.fromEnvironment();
-  } on AppException catch (error) {
-    runApp(FatalConfigApp(exception: error));
-    return;
-  }
+  final AppConfig config = AppConfig.fromEnvironment();
+  // Throws on a cleartext base URL outside a debug mock build, before any widget exists.
+  config.httpsBaseUrl;
 
-  final logger = ArmxLogging.create(config.logLevel, buffer: LogRingBuffer());
-  _installErrorHandlers(logger);
-  logger.i('A.R.M.X ${AppInfo.versionLabel} starting — ${config.describe()}');
+  final ProviderContainer container = ProviderContainer(
+    overrides: <Override>[appConfigProvider.overrideWithValue(config)],
+  );
 
   runApp(
-    ProviderScope(
-      overrides: <Override>[
-        appConfigProvider.overrideWithValue(config),
-        appLoggerProvider.overrideWithValue(logger),
-      ],
+    UncontrolledProviderScope(
+      container: container,
       child: const ArmxApp(),
     ),
   );
-}
-
-void _installErrorHandlers(Logger logger) {
-  final previousHandler = FlutterError.onError;
-  FlutterError.onError = (FlutterErrorDetails details) {
-    previousHandler?.call(details);
-    logger.e(
-      'Flutter framework error',
-      error: details.exception,
-      stackTrace: details.stack,
-    );
-  };
-
-  PlatformDispatcher.instance.onError = (Object error, StackTrace stack) {
-    logger.e('Unhandled platform error', error: error, stackTrace: stack);
-    return true;
-  };
-}
-
-/// Last-resort screen shown when the build configuration itself is unusable.
-///
-/// Intentionally dependency-free: it renders before Riverpod, the database or localization
-/// exist, so a misconfigured release build shows an explanation instead of a blank window.
-class FatalConfigApp extends StatelessWidget {
-  /// Creates the fatal error app.
-  const FatalConfigApp({required this.exception, super.key});
-
-  /// The configuration error that stopped the launch.
-  final AppException exception;
-
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: AppInfo.productName,
-      debugShowCheckedModeBanner: false,
-      theme: ArmxTheme.dark(),
-      home: Builder(
-        builder: (context) {
-          final colors = ArmxColors.of(context);
-          return Scaffold(
-            backgroundColor: colors.background,
-            body: Center(
-              child: Padding(
-                padding: const EdgeInsets.all(28),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: <Widget>[
-                    const ArmxWordmark(fontSize: 30),
-                    const SizedBox(height: 24),
-                    Icon(Icons.report_gmailerrorred_rounded, size: 44, color: colors.red),
-                    const SizedBox(height: 16),
-                    Text(
-                      'This build cannot start',
-                      style: Theme.of(context).textTheme.titleLarge,
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 10),
-                    Text(
-                      exception.message,
-                      textAlign: TextAlign.center,
-                      style: Theme.of(context)
-                          .textTheme
-                          .bodyMedium
-                          ?.copyWith(color: colors.muted),
-                    ),
-                    const SizedBox(height: 18),
-                    Text(
-                      'code: ${exception.code}',
-                      style: Theme.of(context)
-                          .textTheme
-                          .labelSmall
-                          ?.copyWith(color: colors.muted, fontFamily: 'JetBrainsMono'),
-                    ),
-                    const SizedBox(height: 26),
-                    Text(
-                      AppInfo.credit,
-                      textAlign: TextAlign.center,
-                      style: Theme.of(context)
-                          .textTheme
-                          .labelSmall
-                          ?.copyWith(color: colors.muted),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          );
-        },
-      ),
-    );
-  }
 }
