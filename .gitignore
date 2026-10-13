@@ -47,3 +47,7 @@ test/**/failures/
 # OS noise
 .DS_Store
 Thumbs.db
+
+# Golden test output: baselines are committed by hand (see test/golden/README.md); the
+# failure diff images never are.
+test/golden/failures/
